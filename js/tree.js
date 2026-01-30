@@ -2,13 +2,27 @@
 const width = 5000;
 const height = 800;
 const imgBaseUrl = "https://raw.githubusercontent.com/react117/cn-fam-tree/master/assets/images/src/";
+const NODE_RADIUS = 32;
 
 const svg = d3.select("#tree-container")
     .append("svg")
     .attr("width", width)
-    .attr("height", height)
-    .append("g")
-    .attr("transform", "translate(50,50)");
+    .attr("height", height);
+
+const treeGroup = svg.append("g")
+    .attr("class", "tree-container")
+    .attr("transform", `translate(0, 0)`);
+
+// zoom behavior
+const zoom = d3.zoom()
+    .scaleExtent([0.3, 2.5]) // min zoom, max zoom
+    .filter(event => event.type === "wheel" || !event.target.closest(".node")) // allows drag/pan only on empty spaces, zoom everywhere
+    .on("zoom", (event) => {
+        treeGroup.attr("transform", event.transform);
+    });
+
+svg.call(zoom);
+// --
 
 d3.csv("data/family.csv").then(data => {
     data.forEach(d => {
@@ -30,7 +44,6 @@ d3.csv("data/family.csv").then(data => {
  * Pick a root ancestor
 */
 function buildTree(data) {
-    // console.log(data);
     const peopleById = new Map();
     const familyByKey = new Map();
 
@@ -139,6 +152,17 @@ function buildHierarchy(person) {
 
 // Render the tree with D3
 function renderTree(rootData) {
+    // add SVG clip-path
+    // creates a reusable circular mask.
+    const defs = treeGroup.append("defs");
+
+    defs.append("clipPath")
+        .attr("id", "node-circle-clip")
+        .append("circle")
+        .attr("r", NODE_RADIUS)
+        .attr("cx", 0)
+        .attr("cy", 0);
+
     const root = d3.hierarchy(rootData);
 
     const treeLayout = d3.tree()
@@ -147,7 +171,7 @@ function renderTree(rootData) {
     treeLayout(root);
 
     // Links
-    svg.selectAll(".link")
+    treeGroup.selectAll(".link")
         .data(root.links())
         .enter()
         .append("path")
@@ -161,7 +185,7 @@ function renderTree(rootData) {
     // Family nodes (the virtual nodes) are small gray dots
     // Person nodes are normal circles
     // Family nodes have no label
-    const node = svg.selectAll(".node")
+    const node = treeGroup.selectAll(".node")
         .data(root.descendants())
         .enter()
         .append("g")
@@ -169,19 +193,45 @@ function renderTree(rootData) {
         .attr("transform", d => `translate(${d.x},${d.y})`);
 
     node.append("circle")
-        .attr("r", d => d.data.type === "family" ? 6 : 18)
+        .attr("r", d => d.data.type === "family" ? 6 : NODE_RADIUS)
         .style("fill", d => d.data.type === "family" ? "#999" : "#fff")
+        .attr("stroke", "#bbb")
+        .attr("stroke-width", 2)
         .on("click", (event, d) => {
             if (d.data.type === "family") return;
             event.stopPropagation(); // Stop event propagation on node click
             showPopup(event, d.data);
-            // console.log(d.data);
         });
+
+    // add image inside person nodes
+    // loads the image
+    // clips it into a circle
+    // falls back safely
+    node.filter(d => d.data.type !== "family")
+        .append("image")
+        .attr("xlink:href", d => d.data.Image)
+        .attr("x", -NODE_RADIUS)
+        .attr("y", -NODE_RADIUS)
+        .attr("width", NODE_RADIUS * 2)
+        .attr("height", NODE_RADIUS * 2)
+        .attr("clip-path", "url(#node-circle-clip)")
+        .attr("preserveAspectRatio", "xMidYMid slice")
+        .on("error", function (event, d) {
+            const el = d3.select(this);
+
+            if (el.attr("data-fallback")) return;
+
+            const fallback = imgBaseUrl + "def" + d.data.Gender + ".jpg";
+
+            el.attr("data-fallback", "true")
+            .attr("xlink:href", fallback);
+        });
+
 
     node.append("text")
         .filter(d => d.data.type !== "family")
         .attr("dy", 4)
-        .attr("y", 30)
+        .attr("y", 40)
         .text(d => d.data.Name);
 }
 
@@ -189,7 +239,6 @@ function renderTree(rootData) {
 const popup = d3.select("#popup");
 
 function showPopup(event, data) {
-    alert(data.Image);
     popup
         .classed("hidden", false)
         .html(`

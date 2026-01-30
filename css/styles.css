@@ -58,3 +58,7 @@ body {
   margin-bottom: 8px;
   background: #f2f2f2;
 }
+
+.node image {
+  pointer-events: none;
+}
