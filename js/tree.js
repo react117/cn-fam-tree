@@ -1,6 +1,7 @@
 // Load CSV and normalize data
 const width = 5000;
 const height = 800;
+const imgBaseUrl = "https://raw.githubusercontent.com/react117/cn-fam-tree/master/assets/images/src/";
 
 const svg = d3.select("#tree-container")
     .append("svg")
@@ -13,7 +14,7 @@ d3.csv("data/family.csv").then(data => {
     data.forEach(d => {
         d.YearOfBirth = +d.YearOfBirth || null;
         d.YearOfDeath = +d.YearOfDeath || null;
-        d.Image = "https://raw.githubusercontent.com/react117/cn-fam-tree/master/assets/images/src/" + d.Name.replace(/\s/g, "") + ".jpg";
+        d.Image = imgBaseUrl + d.Name.replace(/\s/g, "") + ".jpg";
     });
 
     console.log(data);
@@ -29,6 +30,7 @@ d3.csv("data/family.csv").then(data => {
  * Pick a root ancestor
 */
 function buildTree(data) {
+    // console.log(data);
     const peopleById = new Map();
     const familyByKey = new Map();
 
@@ -173,6 +175,7 @@ function renderTree(rootData) {
             if (d.data.type === "family") return;
             event.stopPropagation(); // Stop event propagation on node click
             showPopup(event, d.data);
+            // console.log(d.data);
         });
 
     node.append("text")
@@ -186,9 +189,15 @@ function renderTree(rootData) {
 const popup = d3.select("#popup");
 
 function showPopup(event, data) {
+    alert(data.Image);
     popup
         .classed("hidden", false)
         .html(`
+            <img 
+                src="${data.Image}" 
+                alt="${data.Name}" 
+                onerror="this.onerror=null;this.src='${imgBaseUrl}def${data.Gender}.jpg';"
+            />
             <h3>${data.Name}</h3>
             ${data.Nickname ? `<div class="meta">"${data.Nickname}"</div>` : ""}
             <div><strong>Gender:</strong> ${data.Gender || "—"}</div>
@@ -200,6 +209,15 @@ function showPopup(event, data) {
         .style("left", `${event.pageX + 10}px`)
         .style("top", `${event.pageY + 10}px`);
 }
+
+/**
+ * This ensures:
+ * Broken URLs don’t show broken icons
+ * Popup stays clean
+ */
+popup.on("error", "img", function () {
+  d3.select(this).remove();
+});
 
 // Close popup when clicking elsewhere
 d3.select("body").on("click", () => {
