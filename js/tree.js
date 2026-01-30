@@ -168,7 +168,12 @@ function renderTree(rootData) {
 
     node.append("circle")
         .attr("r", d => d.data.type === "family" ? 6 : 18)
-        .style("fill", d => d.data.type === "family" ? "#999" : "#fff");
+        .style("fill", d => d.data.type === "family" ? "#999" : "#fff")
+        .on("click", (event, d) => {
+            if (d.data.type === "family") return;
+            event.stopPropagation(); // Stop event propagation on node click
+            showPopup(event, d.data);
+        });
 
     node.append("text")
         .filter(d => d.data.type !== "family")
@@ -176,3 +181,31 @@ function renderTree(rootData) {
         .attr("y", 30)
         .text(d => d.data.Name);
 }
+
+// Node Details Popup Logic
+const popup = d3.select("#popup");
+
+function showPopup(event, data) {
+    popup
+        .classed("hidden", false)
+        .html(`
+            <h3>${data.Name}</h3>
+            ${data.Nickname ? `<div class="meta">"${data.Nickname}"</div>` : ""}
+            <div><strong>Gender:</strong> ${data.Gender || "—"}</div>
+            <div><strong>Born:</strong> ${data.YearOfBirth || "—"}</div>
+            <div><strong>Died:</strong> ${data.YearOfDeath || "—"}</div>
+            <div><strong>Profession:</strong> ${data.Profession || "—"}</div>
+            ${data.Notes ? `<div><strong>Notes:</strong> ${data.Notes}</div>` : ""}
+        `)
+        .style("left", `${event.pageX + 10}px`)
+        .style("top", `${event.pageY + 10}px`);
+}
+
+// Close popup when clicking elsewhere
+d3.select("body").on("click", () => {
+    popup.classed("hidden", true);
+});
+
+// Stop event propagation on popup click
+popup.on("click", event => event.stopPropagation());
+
