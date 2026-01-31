@@ -1,17 +1,18 @@
 // Load CSV and normalize data
-const width = 5000;
-const height = 800;
-const imgBaseUrl = "https://raw.githubusercontent.com/react117/cn-fam-tree/master/assets/images/src/";
+const WIDTH = 5000;
+const HEIGHT = 1000;
+const IMG_BASE_URL = "https://raw.githubusercontent.com/react117/cn-fam-tree/master/assets/images/src/";
 const NODE_RADIUS = 32;
+const TREE_DEFAULT_SCALE = 0.75;
 
 const svg = d3.select("#tree-container")
     .append("svg")
-    .attr("width", width)
-    .attr("height", height);
+    .attr("width", WIDTH)
+    .attr("height", HEIGHT);
 
 const treeGroup = svg.append("g")
     .attr("class", "tree-container")
-    .attr("transform", `translate(0, 0)`);
+    .attr("transform", `translate(${WIDTH / 4}, 100) scale(${TREE_DEFAULT_SCALE})`);
 
 // zoom behavior
 const zoom = d3.zoom()
@@ -22,16 +23,19 @@ const zoom = d3.zoom()
     });
 
 svg.call(zoom);
+
+// Set initial position [Solves the jump/jerk on 1st zoom/pan]
+svg.call(zoom.transform, d3.zoomIdentity.translate(WIDTH / 4, 100).scale(TREE_DEFAULT_SCALE));
 // --
 
 d3.csv("data/family.csv").then(data => {
     data.forEach(d => {
         d.YearOfBirth = +d.YearOfBirth || null;
         d.YearOfDeath = +d.YearOfDeath || null;
-        d.Image = imgBaseUrl + d.Name.replace(/\s/g, "") + ".jpg";
+        d.Image = IMG_BASE_URL + d.Name.replace(/\s/g, "") + ".jpg";
     });
 
-    console.log(data);
+    // console.log(data);
 
     buildTree(data);
 });
@@ -74,22 +78,55 @@ function buildTree(data) {
 
         if (!familyByKey.has(key)) {
             familyNode = {
-            ID: `FAM_${key}`,
-            type: "family",
-            parents: [father, mother],
-            children: []
+                ID: `FAM_${key}`,
+                type: "family",
+                parents: [father, mother],
+                children: []
             };
 
             familyByKey.set(key, familyNode);
 
             father._families.push(familyNode);
             mother._families.push(familyNode);
+
+            // mark spouse persons once
+            father._isSpouse = true;
+            mother._isSpouse = true;
         } else {
             familyNode = familyByKey.get(key);
         }
 
         familyNode.children.push(child);
     });
+
+    // Create family nodes for married couples with no children
+    data.forEach(person => {
+        if (!person.MarriedToID) return;
+
+        const spouse = peopleById.get(person.MarriedToID);
+        if (!spouse) return;
+
+        const key = familyKey(person.ID, spouse.ID);
+
+        if (!familyByKey.has(key)) {
+            const familyNode = {
+                ID: `FAM_${key}`,
+                type: "family",
+                parents: [person, spouse],
+                children: []
+            };
+
+            familyByKey.set(key, familyNode);
+
+            person._families.push(familyNode);
+            spouse._families.push(familyNode);
+
+            person._isSpouse = true;
+            spouse._isSpouse = true;
+        }
+    });
+
+    console.log(data);
 
     // Pick root ancestor (person with no parents)
     const rootPerson = data.find(
@@ -138,6 +175,7 @@ function buildHierarchy(person) {
             const familyNode = {
                 ID: family.ID,
                 type: "family",
+                parents: family.parents, // KEEP parents
                 children: family.children.map(child =>
                     buildHierarchy(child)
                 )
@@ -166,7 +204,11 @@ function renderTree(rootData) {
     const root = d3.hierarchy(rootData);
 
     const treeLayout = d3.tree()
-        .size([width - 200, height - 200]);
+        .nodeSize([140, 220]); // [horizontal, vertical]
+    
+    root.descendants().forEach(d => {
+        d.y = d.depth * 1800;
+    });
 
     treeLayout(root);
 
@@ -189,12 +231,84 @@ function renderTree(rootData) {
         .data(root.descendants())
         .enter()
         .append("g")
-        .attr("class", "node")
+        .attr("class", d =>
+            d.data.type === "family" ? "node family-node" : "node person-node"
+        )
         .attr("transform", d => `translate(${d.x},${d.y})`);
 
-    node.append("circle")
-        .attr("r", d => d.data.type === "family" ? 6 : NODE_RADIUS)
-        .style("fill", d => d.data.type === "family" ? "#999" : "#fff")
+
+    // ------
+
+    // render family nodes
+    // - married
+    // - have children
+    node.filter(d => d.data.type === "family")
+    .each(function (d) {
+        const familyGroup = d3.select(this);
+        const spouses = d.data.parents || [];
+
+        const spouseOffset = 40;
+
+        spouses.forEach((person, index) => {
+            const xOffset =
+            spouses.length === 1 ? 0 :
+            index === 0 ? -spouseOffset : spouseOffset;
+
+            const personGroup = familyGroup.append("g")
+            .attr("class", "spouse-node")
+            .attr("transform", `translate(${xOffset}, 0)`);
+
+            // border
+            personGroup.append("circle")
+                .attr("r", NODE_RADIUS)
+                .style("fill", "#999")
+                .attr("stroke", "#bbb")
+                .attr("stroke-width", 2);
+
+            // image
+            personGroup
+                .append("image")
+                .attr("xlink:href", d => person.Image)
+                .attr("x", -NODE_RADIUS)
+                .attr("y", -NODE_RADIUS)
+                .attr("width", NODE_RADIUS * 2)
+                .attr("height", NODE_RADIUS * 2)
+                .attr("clip-path", "url(#node-circle-clip)")
+                .attr("preserveAspectRatio", "xMidYMid slice")
+                .on("error", function (event, d) {
+                    const el = d3.select(this);
+
+                    if (el.attr("data-fallback")) return;
+
+                    const fallback = IMG_BASE_URL + "def" + person.Gender + ".jpg";
+
+                    el.attr("data-fallback", "true")
+                    .attr("xlink:href", fallback);
+                });
+
+            // add name
+            personGroup.append("text")
+                .attr("dy", 4)
+                .attr("y", 40)
+                .text(d => person.Name);
+
+            // popup
+            personGroup.on("click", (event) => {
+                // event.preventDefault();
+                event.stopPropagation();
+                showPopup(event, person);
+            });
+        });
+    });
+    // ------
+
+    // render single people nodes
+    // - not married
+    // - no children
+    node.filter(d => d.data.type !== "family" && !d.data._isSpouse) // family node exists but invisible.
+        .append("circle")
+        .attr("r", NODE_RADIUS)
+        .style("fill", "#999")
         .attr("stroke", "#bbb")
         .attr("stroke-width", 2)
         .on("click", (event, d) => {
@@ -207,7 +321,7 @@ function renderTree(rootData) {
     // loads the image
     // clips it into a circle
     // falls back safely
-    node.filter(d => d.data.type !== "family")
+    node.filter(d => d.data.type !== "family" && !d.data._isSpouse)
         .append("image")
         .attr("xlink:href", d => d.data.Image)
         .attr("x", -NODE_RADIUS)
@@ -221,19 +335,20 @@ function renderTree(rootData) {
 
             if (el.attr("data-fallback")) return;
 
-            const fallback = imgBaseUrl + "def" + d.data.Gender + ".jpg";
+            const fallback = IMG_BASE_URL + "def" + d.data.Gender + ".jpg";
 
             el.attr("data-fallback", "true")
             .attr("xlink:href", fallback);
         });
 
-
-    node.append("text")
-        .filter(d => d.data.type !== "family")
+    // add name
+    node.filter(d => d.data.type !== "family" && !d.data._isSpouse)
+        .append("text")
         .attr("dy", 4)
         .attr("y", 40)
         .text(d => d.data.Name);
 }
+// ----
 
 // Node Details Popup Logic
 const popup = d3.select("#popup");
@@ -245,7 +360,7 @@ function showPopup(event, data) {
             <img 
                 src="${data.Image}" 
                 alt="${data.Name}" 
-                onerror="this.onerror=null;this.src='${imgBaseUrl}def${data.Gender}.jpg';"
+                onerror="this.onerror=null;this.src='${IMG_BASE_URL}def${data.Gender}.jpg';"
             />
             <h3>${data.Name}</h3>
             ${data.Nickname ? `<div class="meta">"${data.Nickname}"</div>` : ""}
