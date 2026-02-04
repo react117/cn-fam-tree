@@ -22,11 +22,6 @@ const zoom = d3.zoom()
         // Always allow wheel zoom
         if (event.type === "wheel") return true;
 
-        // Allow touch / pointer drag ONLY if not on a node
-        if (event.type === "touchstart" || event.type === "touchmove" || event.type === "pointerdown") {
-            return !event.target.closest(".node");
-        }
-
         // Allow mouse drag only on empty space
         if (event.type === "mousedown") {
             return !event.target.closest(".node");
