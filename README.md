@@ -74,15 +74,14 @@ Each row represents one person.
 | `FatherID` | ID of father (**nullable**) |
 | `MotherID` | ID of mother (**nullable**) |
 | `MarriedToID` | ID of spouse (**nullable**) |
-| `Image` | Image URL (**GitHub raw URL recommended**) |
 | `Notes` | Additional notes |
 
 ### Example
 
 ```csv
-ID,Name,Gender,YearOfBirth,FatherID,MotherID,Image
-P001,Ram Kumar,Male,1945,,,https://raw.githubusercontent.com/username/repo/main/assets/images/ram.jpg
-P002,Sita Devi,Female,1950,,,https://raw.githubusercontent.com/username/repo/main/assets/images/sita.jpg
+ID,Name,Gender,YearOfBirth,FatherID,MotherID,Notes
+P001,Ram Kumar,Male,1945,,,,
+P002,Sita Devi,Female,1950,,,,
 P003,Amit Kumar,Male,1975,P001,P002,
 ```
 
@@ -90,7 +89,7 @@ P003,Amit Kumar,Male,1975,P001,P002,
 
 ## 🧠 How It Works
 
-1. `CN_Family_Tree.csv` is loaded using `d3.csv()`
+1. `family.csv` is loaded using `d3.csv()`
 2. Each person is mapped by `ID`
 3. Parent-child relationships are built using `FatherID` and `MotherID`
 4. D3’s `tree()` layout renders the hierarchy

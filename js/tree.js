@@ -204,9 +204,10 @@ function renderTree(rootData) {
     const root = d3.hierarchy(rootData);
 
     const treeLayout = d3.tree()
-        .nodeSize([140, 220]); // [horizontal, vertical]
+        .nodeSize([180, 200]); // [horizontal spacing (siblings / cousins), vertical spacing (generations)]
     
     root.descendants().forEach(d => {
+        d.x = 18000;
         d.y = d.depth * 1800;
     });
 
@@ -235,8 +236,6 @@ function renderTree(rootData) {
             d.data.type === "family" ? "node family-node" : "node person-node"
         )
         .attr("transform", d => `translate(${d.x},${d.y})`);
-
-
     // ------
 
     // render family nodes
@@ -247,7 +246,7 @@ function renderTree(rootData) {
         const familyGroup = d3.select(this);
         const spouses = d.data.parents || [];
 
-        const spouseOffset = 40;
+        const spouseOffset = 80;
 
         spouses.forEach((person, index) => {
             const xOffset =
@@ -256,7 +255,7 @@ function renderTree(rootData) {
 
             const personGroup = familyGroup.append("g")
             .attr("class", "spouse-node")
-            .attr("transform", `translate(${xOffset}, 0)`);
+            .attr("transform", `translate(${xOffset}, -50)`);
 
             // border
             personGroup.append("circle")
