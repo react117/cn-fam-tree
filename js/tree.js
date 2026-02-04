@@ -4,6 +4,9 @@ const HEIGHT = 1000;
 const IMG_BASE_URL = "https://raw.githubusercontent.com/react117/cn-fam-tree/master/assets/images/src/";
 const NODE_RADIUS = 32;
 const TREE_DEFAULT_SCALE = 0.75;
+const personNodeMap = new Map();
+let searchIndex = null;
+let treeRoot = null;
 
 const svg = d3.select("#tree-container")
     .append("svg")
@@ -12,8 +15,8 @@ const svg = d3.select("#tree-container")
     .style("touch-action", "none");
 
 const treeGroup = svg.append("g")
-    .attr("class", "tree-container")
-    .attr("transform", `translate(${WIDTH / 4}, 100) scale(${TREE_DEFAULT_SCALE})`);
+    .attr("class", "tree-container");
+    // .attr("transform", `translate(${WIDTH / 4}, 100) scale(${TREE_DEFAULT_SCALE})`);
 
 // zoom behavior
 const zoom = d3.zoom()
@@ -33,20 +36,35 @@ const zoom = d3.zoom()
         treeGroup.attr("transform", event.transform);
     });
 
+const initialTransform = d3.zoomIdentity
+  .translate(WIDTH / 4, 100)
+  .scale(TREE_DEFAULT_SCALE);
+
 svg.call(zoom);
+svg.call(zoom.transform, initialTransform);
 
 // Set initial position [Solves the jump/jerk on 1st zoom/pan]
-svg.call(zoom.transform, d3.zoomIdentity.translate(WIDTH / 4, 100).scale(TREE_DEFAULT_SCALE));
+// svg.call(zoom.transform, d3.zoomIdentity.translate(WIDTH / 4, 100).scale(TREE_DEFAULT_SCALE));
 // --
 
 d3.csv("data/family.csv").then(data => {
     data.forEach(d => {
         d.YearOfBirth = +d.YearOfBirth || null;
         d.YearOfDeath = +d.YearOfDeath || null;
+        d.YearOfMarriage = +d.YearOfMarriage || null;
         d.Image = IMG_BASE_URL + d.Name.replace(/\s/g, "") + ".jpg";
     });
 
-    // console.log(data);
+    console.log(data);
+
+    // Create a lightweight in-memory index
+    searchIndex = data.map(person => ({
+        id: person.ID,
+        name: (person.Name || "").toLowerCase(),
+        nickname: (person.Nickname || "").toLowerCase(),
+        image: person.Image,
+        raw: person
+    }));
 
     buildTree(data);
 });
@@ -137,8 +155,6 @@ function buildTree(data) {
         }
     });
 
-    console.log(data);
-
     // Pick root ancestor (person with no parents)
     const rootPerson = data.find(
         p => !p.FatherID && !p.MotherID
@@ -212,15 +228,10 @@ function renderTree(rootData) {
         .attr("cx", 0)
         .attr("cy", 0);
 
-    const root = d3.hierarchy(rootData);
+    const root = treeRoot = d3.hierarchy(rootData);
 
     const treeLayout = d3.tree()
         .nodeSize([180, 200]); // [horizontal spacing (siblings / cousins), vertical spacing (generations)]
-    
-    root.descendants().forEach(d => {
-        d.x = 18000;
-        d.y = d.depth * 1800;
-    });
 
     treeLayout(root);
 
@@ -246,7 +257,8 @@ function renderTree(rootData) {
         .attr("class", d =>
             d.data.type === "family" ? "node family-node" : "node person-node"
         )
-        .attr("transform", d => `translate(${d.x},${d.y})`);
+        .attr("transform", d => `translate(${d.x},${d.y})`)
+        .attr("data-person-id", d => d.data.ID);
     // ------
 
     // render family nodes
@@ -265,8 +277,9 @@ function renderTree(rootData) {
             index === 0 ? -spouseOffset : spouseOffset;
 
             const personGroup = familyGroup.append("g")
-            .attr("class", "spouse-node")
-            .attr("transform", `translate(${xOffset}, -50)`);
+                .attr("class", "spouse-node")
+                .attr("transform", `translate(${xOffset}, -50)`)
+                .attr("data-person-id", person.ID);
 
             // border
             personGroup.append("circle")
@@ -401,3 +414,129 @@ d3.select("body").on("click", () => {
 // Stop event propagation on popup click
 popup.on("click", event => event.stopPropagation());
 
+/* AUTOCOMPLETE AND SEARCH FUNCTIONALITY */
+
+/**
+ * Search helper function for autocomplete
+ * @param {*} query user search input
+ * @returns filtered index
+ */
+function searchPeople(query) {
+    if (!query || query.length < 2) return [];
+
+    const q = query.toLowerCase();
+
+    return searchIndex.filter(p =>
+        p.name.includes(q) ||
+        p.nickname.includes(q)
+    ).slice(0, 5); // limit results
+}
+
+/**
+ * Renderes the search result
+ * @param {*} results 
+ */
+function renderSearchResults(results) {
+    const container = document.getElementById("search-results");
+    container.innerHTML = "";
+
+    results.forEach(person => {
+        const item = document.createElement("div");
+        item.className = "search-result";
+
+        item.innerHTML = `
+            <img src="${person.image}" onerror="this.src='${IMG_BASE_URL}def${person.raw.Gender}.jpg'"/>
+            <span>${person.raw.Name}</span>
+        `;
+
+        item.onclick = () => {
+            console.log(person);
+            selectPerson(person.raw.ID);
+            container.innerHTML = "";
+        };
+
+        container.appendChild(item);
+    });
+}
+
+/**
+ * Two-pass search
+ * @param {*} personId 
+ * @returns the correct person/family node if found
+ */
+function findNodeForPerson(personId) {
+    return treeRoot.descendants().find(d => {
+        const data = d.data;
+
+        // direct person node
+        if (data.ID === personId) return true;
+
+        // family node containing this person
+        if (Array.isArray(data.parents) && data.parents.map(item => item.ID).includes(personId)) {
+            console.log("hi");
+            return true;
+        }
+
+        return false;
+    }) || null;
+}
+
+/**
+ * Select Person → Center & Focus
+ * @param {*} personId 
+ */
+function selectPerson(personId) {
+    // Find the node to center on
+    const targetNode = findNodeForPerson(personId);
+    if (!targetNode) return;
+
+    const scale = window.innerWidth < 768 ? 1.4 : 1;
+    const svgRect = svg.node().getBoundingClientRect();
+
+    // match initial zoom translate
+    const initialX = WIDTH / 4;
+    const initialY = 100;
+
+    const x =
+        svgRect.width / 2
+        - (targetNode.x * scale)
+        - initialX * scale;
+
+    const y =
+        svgRect.height / 2
+        - (targetNode.y * scale)
+        - initialY * scale;
+
+    // Compute transform
+    svg.transition()
+        .duration(750)
+        .call(
+            zoom.transform,
+            d3.zoomIdentity.translate(x, y).scale(scale)
+        );
+
+    // Highlight the searched person
+    highlightNode(personId);
+}
+
+/**
+ * Visual focus indicator
+ * @param {*} personId 
+ */
+function highlightNode(personId) {
+    // clear previous highlights
+    d3.selectAll(".highlighted")
+        .classed("highlighted", false);
+
+    // highlight ALL representations of this person
+    d3.selectAll(`[data-person-id="${personId}"]`)
+        .classed("highlighted", true);
+}
+
+// Wire Input → Autocomplete for search
+const searchInput = document.getElementById("search-input");
+
+searchInput.addEventListener("input", (e) => {
+    const results = searchPeople(e.target.value);
+    renderSearchResults(results);
+});
