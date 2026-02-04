@@ -3,8 +3,10 @@ const WIDTH = 5000;
 const HEIGHT = 1000;
 const IMG_BASE_URL = "https://raw.githubusercontent.com/react117/cn-fam-tree/master/assets/images/src/";
 const NODE_RADIUS = 32;
-const TREE_DEFAULT_SCALE = 0.75;
 const personNodeMap = new Map();
+const INITIAL_TRANSLATE_X = WIDTH / 4;
+const INITIAL_TRANSLATE_Y = 100;
+const TREE_DEFAULT_SCALE = 0.75;
 let searchIndex = null;
 let treeRoot = null;
 
@@ -16,7 +18,6 @@ const svg = d3.select("#tree-container")
 
 const treeGroup = svg.append("g")
     .attr("class", "tree-container");
-    // .attr("transform", `translate(${WIDTH / 4}, 100) scale(${TREE_DEFAULT_SCALE})`);
 
 // zoom behavior
 const zoom = d3.zoom()
@@ -36,13 +37,19 @@ const zoom = d3.zoom()
         // Mouse drag only on empty space (not on nodes)
         return !event.target.closest(".node");
     })
-
     .on("zoom", (event) => {
         treeGroup.attr("transform", event.transform);
     });
 
+svg.call(
+  zoom.transform,
+  d3.zoomIdentity
+    .translate(WIDTH / 4, 100)
+    .scale(TREE_DEFAULT_SCALE)
+);
+
 const initialTransform = d3.zoomIdentity
-  .translate(WIDTH / 4, 100)
+  .translate(INITIAL_TRANSLATE_X, INITIAL_TRANSLATE_Y)
   .scale(TREE_DEFAULT_SCALE);
 
 svg.call(zoom);
@@ -491,29 +498,18 @@ function findNodeForPerson(personId) {
  * @param {*} personId 
  */
 function selectPerson(personId) {
-    searchInput
-    // Find the node to center on
     const targetNode = findNodeForPerson(personId);
     if (!targetNode) return;
 
-    const scale = window.innerWidth < 768 ? 1.4 : 1;
-    const svgRect = svg.node().getBoundingClientRect();
+    const isMobile = window.innerWidth < 768;
+    const scale = isMobile ? 1.4 : 1;
 
-    // match initial zoom translate
-    const initialX = WIDTH / 4;
-    const initialY = 100;
+    const container = document.getElementById("tree-container");
+    const rect = container.getBoundingClientRect();
 
-    const x =
-        svgRect.width / 2
-        - (targetNode.x * scale)
-        - initialX * scale;
+    const x = rect.width / 2 - targetNode.x * scale;
+    const y = rect.height / 2 - targetNode.y * scale;
 
-    const y =
-        svgRect.height / 2
-        - (targetNode.y * scale)
-        - initialY * scale;
-
-    // Compute transform
     svg.transition()
         .duration(750)
         .call(
@@ -521,7 +517,6 @@ function selectPerson(personId) {
             d3.zoomIdentity.translate(x, y).scale(scale)
         );
 
-    // Highlight the searched person
     highlightNode(personId);
 }
 
