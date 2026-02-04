@@ -25,6 +25,7 @@ fs.createReadStream("data/family.csv")
       Mother: clean(row.Mother),
       Married_to: clean(row.Married_to),
       Image: clean(row.Image),
+      YearOfMarriage: clean(row["YearOfMarriage"]),
       Notes: clean(row.Notes),
       children: []
     };

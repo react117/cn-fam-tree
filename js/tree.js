@@ -22,16 +22,21 @@ const treeGroup = svg.append("g")
 const zoom = d3.zoom()
     .scaleExtent([0.3, 2.5]) // min zoom, max zoom
     .filter(event => {
-        // Always allow wheel zoom
+        // Always allow programmatic zoom (search centering)
+        if (!event.sourceEvent) return true;
+
+        const sourceType = event.sourceEvent.type;
+
+        // Touch gestures (mobile)
+        if (sourceType && sourceType.startsWith("touch")) return true;
+
+        // Mouse wheel (desktop)
         if (event.type === "wheel") return true;
 
-        // Allow mouse drag only on empty space
-        if (event.type === "mousedown") {
-            return !event.target.closest(".node");
-        }
-
-        return false;
+        // Mouse drag only on empty space (not on nodes)
+        return !event.target.closest(".node");
     })
+
     .on("zoom", (event) => {
         treeGroup.attr("transform", event.transform);
     });
@@ -449,10 +454,11 @@ function renderSearchResults(results) {
             <span>${person.raw.Name}</span>
         `;
 
+        container.style.display = "block";
+
         item.onclick = () => {
-            console.log(person);
             selectPerson(person.raw.ID);
-            container.innerHTML = "";
+            clearSearch();
         };
 
         container.appendChild(item);
@@ -473,7 +479,6 @@ function findNodeForPerson(personId) {
 
         // family node containing this person
         if (Array.isArray(data.parents) && data.parents.map(item => item.ID).includes(personId)) {
-            console.log("hi");
             return true;
         }
 
@@ -486,6 +491,7 @@ function findNodeForPerson(personId) {
  * @param {*} personId 
  */
 function selectPerson(personId) {
+    searchInput
     // Find the node to center on
     const targetNode = findNodeForPerson(personId);
     if (!targetNode) return;
@@ -533,10 +539,31 @@ function highlightNode(personId) {
         .classed("highlighted", true);
 }
 
-// Wire Input → Autocomplete for search
+// Cache references for search | Wire Input → Autocomplete
 const searchInput = document.getElementById("search-input");
+const clearSearchBtn = document.getElementById("clear-search-btn");
+const searchResults = document.getElementById("search-results");
 
 searchInput.addEventListener("input", (e) => {
     const results = searchPeople(e.target.value);
     renderSearchResults(results);
+    clearSearchBtn.style.display = searchInput.value.trim() ? "block" : "none";
 });
+
+clearSearchBtn.addEventListener("click", () => {
+    clearSearch();
+});
+
+/**
+ * Clears the search query
+ */
+function clearSearch() {
+    searchInput.value = "";
+    clearSearchBtn.style.display = "none";
+
+    // clear autocomplete results
+    searchResults.innerHTML = "";
+    searchResults.style.display = "none";
+
+    searchInput.blur(); // optional, good for mobile
+}

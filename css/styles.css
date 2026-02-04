@@ -8,6 +8,10 @@ body {
   overflow: hidden;
 }
 
+.tree-container {
+  touch-action: none;
+}
+
 .node circle {
   fill: #fff;
   stroke: steelblue;
@@ -64,7 +68,8 @@ body {
 }
 
 #search-container {
-    position: fixed;
+    position: relative;
+    overflow: visible;
     top: 12px;
     left: 50%;
     transform: translateX(-50%);
@@ -79,17 +84,27 @@ body {
 }
 
 #search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+
     background: white;
     border-radius: 8px;
     margin-top: 4px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 .search-result {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 12px;
+
+    padding: 10px 12px;
     cursor: pointer;
 }
 
@@ -107,4 +122,21 @@ body {
 .highlighted {
     outline: 3px solid #4da3ff;
     outline-offset: 4px;
+}
+
+#clear-search-btn {
+  position: absolute;
+  right: -28px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: red;
+  border: 2px solid;
+  font-size: 27px;
+  cursor: pointer;
+  display: none;
+  opacity: 0.75;
+}
+
+#clear-search-btn:hover {
+  opacity: 1;
 }
