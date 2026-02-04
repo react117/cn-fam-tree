@@ -8,7 +8,8 @@ const TREE_DEFAULT_SCALE = 0.75;
 const svg = d3.select("#tree-container")
     .append("svg")
     .attr("width", WIDTH)
-    .attr("height", HEIGHT);
+    .attr("height", HEIGHT)
+    .style("touch-action", "none");
 
 const treeGroup = svg.append("g")
     .attr("class", "tree-container")
@@ -17,7 +18,22 @@ const treeGroup = svg.append("g")
 // zoom behavior
 const zoom = d3.zoom()
     .scaleExtent([0.3, 2.5]) // min zoom, max zoom
-    .filter(event => event.type === "wheel" || !event.target.closest(".node")) // allows drag/pan only on empty spaces, zoom everywhere
+    .filter(event => {
+        // Always allow wheel zoom
+        if (event.type === "wheel") return true;
+
+        // Allow touch / pointer drag ONLY if not on a node
+        if (event.type === "touchstart" || event.type === "touchmove" || event.type === "pointerdown") {
+            return !event.target.closest(".node");
+        }
+
+        // Allow mouse drag only on empty space
+        if (event.type === "mousedown") {
+            return !event.target.closest(".node");
+        }
+
+        return false;
+    })
     .on("zoom", (event) => {
         treeGroup.attr("transform", event.transform);
     });
