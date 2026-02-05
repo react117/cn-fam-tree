@@ -1,12 +1,14 @@
 // Load CSV and normalize data
 const WIDTH = 5000;
-const HEIGHT = 1000;
+const HEIGHT = window.innerHeight;
 const IMG_BASE_URL = "https://raw.githubusercontent.com/react117/cn-fam-tree/master/assets/images/src/";
 const NODE_RADIUS = 32;
 const personNodeMap = new Map();
 const INITIAL_TRANSLATE_X = WIDTH / 4;
 const INITIAL_TRANSLATE_Y = 100;
-const TREE_DEFAULT_SCALE = 0.75;
+const TREE_DEFAULT_SCALE = 0.8;
+const CARD_WIDTH = 120;
+const CARD_HEIGHT = 160;
 let searchIndex = null;
 let treeRoot = null;
 
@@ -52,11 +54,9 @@ const initialTransform = d3.zoomIdentity
   .translate(INITIAL_TRANSLATE_X, INITIAL_TRANSLATE_Y)
   .scale(TREE_DEFAULT_SCALE);
 
+// Set initial position [Solves the jump/jerk on 1st zoom/pan]
 svg.call(zoom);
 svg.call(zoom.transform, initialTransform);
-
-// Set initial position [Solves the jump/jerk on 1st zoom/pan]
-// svg.call(zoom.transform, d3.zoomIdentity.translate(WIDTH / 4, 100).scale(TREE_DEFAULT_SCALE));
 // --
 
 d3.csv("data/family.csv").then(data => {
@@ -66,8 +66,6 @@ d3.csv("data/family.csv").then(data => {
         d.YearOfMarriage = +d.YearOfMarriage || null;
         d.Image = IMG_BASE_URL + d.Name.replace(/\s/g, "") + ".jpg";
     });
-
-    console.log(data);
 
     // Create a lightweight in-memory index
     searchIndex = data.map(person => ({
@@ -273,9 +271,10 @@ function renderTree(rootData) {
         .attr("data-person-id", d => d.data.ID);
     // ------
 
-    // render family nodes
-    // - married
-    // - have children
+    // person card default padding
+    const FO_PADDING = 30;
+
+    // render family nodes | married | have children
     node.filter(d => d.data.type === "family")
     .each(function (d) {
         const familyGroup = d3.select(this);
@@ -293,95 +292,73 @@ function renderTree(rootData) {
                 .attr("transform", `translate(${xOffset}, -50)`)
                 .attr("data-person-id", person.ID);
 
-            // border
-            personGroup.append("circle")
-                .attr("r", NODE_RADIUS)
-                .style("fill", "#999")
-                .attr("stroke", "#bbb")
-                .attr("stroke-width", 2);
-
-            // image
             personGroup
-                .append("image")
-                .attr("xlink:href", d => person.Image)
-                .attr("x", -NODE_RADIUS)
-                .attr("y", -NODE_RADIUS)
-                .attr("width", NODE_RADIUS * 2)
-                .attr("height", NODE_RADIUS * 2)
-                .attr("clip-path", "url(#node-circle-clip)")
-                .attr("preserveAspectRatio", "xMidYMid slice")
-                .on("error", function (event, d) {
-                    const el = d3.select(this);
-
-                    if (el.attr("data-fallback")) return;
-
-                    const fallback = IMG_BASE_URL + "def" + person.Gender + ".jpg";
-
-                    el.attr("data-fallback", "true")
-                    .attr("xlink:href", fallback);
+                .append("foreignObject")
+                .attr("x", -(CARD_WIDTH / 2) - FO_PADDING)
+                .attr("y", -(CARD_HEIGHT / 2) - FO_PADDING)
+                .attr("width", CARD_WIDTH + FO_PADDING * 2)
+                .attr("height", CARD_HEIGHT + FO_PADDING * 2)
+                .append("xhtml:div")
+                .attr("class", "person-card-wrapper spouse-card")
+                .html(d => renderPersonCardHTML(person))
+                .on("click", (event) => {
+                    // event.preventDefault();
+                    event.stopPropagation();
+                    showPopup(event, person);
                 });
-
-            // add name
-            personGroup.append("text")
-                .attr("dy", 4)
-                .attr("y", 40)
-                .text(d => person.Name);
-
-            // popup
-            personGroup.on("click", (event) => {
-                // event.preventDefault();
-                event.stopPropagation();
-                showPopup(event, person);
-            });
         });
     });
     // ------
 
-    // render single people nodes
-    // - not married
-    // - no children
-    node.filter(d => d.data.type !== "family" && !d.data._isSpouse) // family node exists but invisible.
-        .append("circle")
-        .attr("r", NODE_RADIUS)
-        .style("fill", "#999")
-        .attr("stroke", "#bbb")
-        .attr("stroke-width", 2)
+    // render single people nodes | not married | no children
+    node
+        .filter(d => d.data.type !== "family" && !d.data._isSpouse)
+        .append("foreignObject")
+        .attr("x", -(CARD_WIDTH / 2) - FO_PADDING)
+        .attr("y", -(CARD_HEIGHT / 2) - FO_PADDING)
+        .attr("width", CARD_WIDTH + FO_PADDING * 2)
+        .attr("height", CARD_HEIGHT + FO_PADDING * 2)
+        .append("xhtml:div")
+        .attr("class", "person-card-wrapper")
+        .html(d => renderPersonCardHTML(d.data))
         .on("click", (event, d) => {
-            if (d.data.type === "family") return;
-            event.stopPropagation(); // Stop event propagation on node click
+            event.stopPropagation();
             showPopup(event, d.data);
         });
+}
 
-    // add image inside person nodes
-    // loads the image
-    // clips it into a circle
-    // falls back safely
-    node.filter(d => d.data.type !== "family" && !d.data._isSpouse)
-        .append("image")
-        .attr("xlink:href", d => d.data.Image)
-        .attr("x", -NODE_RADIUS)
-        .attr("y", -NODE_RADIUS)
-        .attr("width", NODE_RADIUS * 2)
-        .attr("height", NODE_RADIUS * 2)
-        .attr("clip-path", "url(#node-circle-clip)")
-        .attr("preserveAspectRatio", "xMidYMid slice")
-        .on("error", function (event, d) {
-            const el = d3.select(this);
+/**
+ * Helper function to construct person cards
+ * @param {*} d node/person data
+ * @returns person card html
+ */
+function renderPersonCardHTML(personData) {
+    let yob = personData.YearOfBirth;
+    let yod = personData.YearOfDeath;
 
-            if (el.attr("data-fallback")) return;
+    let lifeText = "";
+    if (yob && !yod) {
+        const age = new Date().getFullYear() - yob;
+        lifeText = `${yob} · ${age} years`;
+    } else if (!yob && !yod) {
+        lifeText = `Unknown`;
+    } else {
+        yob = (!yob) ? `Unknown` : yob;
+        yod = (!yod) ? `Unknown` : yod;
 
-            const fallback = IMG_BASE_URL + "def" + d.data.Gender + ".jpg";
+        lifeText = `${yob} – ${yod}`;
+    }
 
-            el.attr("data-fallback", "true")
-            .attr("xlink:href", fallback);
-        });
-
-    // add name
-    node.filter(d => d.data.type !== "family" && !d.data._isSpouse)
-        .append("text")
-        .attr("dy", 4)
-        .attr("y", 40)
-        .text(d => d.data.Name);
+    return `
+        <div class="person-card">
+            <div class="card-image">
+                <img src="${personData.Image}"
+                    onerror="this.onerror=null;this.src='${IMG_BASE_URL}def${personData.Gender}.jpg';" />
+            </div>
+            <div class="card-name">${personData.Name}</div>
+            ${lifeText ? `<div class="card-meta">${lifeText}</div>
+        </div>` : ""}
+    `;
 }
 // ----
 
