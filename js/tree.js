@@ -1,9 +1,8 @@
-// Load CSV and normalize data
+const IS_MOBILE_OR_TABLET = window.matchMedia("(max-width: 1024px)").matches;
 const WIDTH = 5000;
 const HEIGHT = window.innerHeight;
 const IMG_BASE_URL = "https://raw.githubusercontent.com/react117/cn-fam-tree/master/assets/images/src/";
 const NODE_RADIUS = 32;
-const personNodeMap = new Map();
 const INITIAL_TRANSLATE_X = WIDTH / 4;
 const INITIAL_TRANSLATE_Y = 100;
 const TREE_DEFAULT_SCALE = 0.8;
@@ -304,7 +303,10 @@ function renderTree(rootData) {
                 .on("click", (event) => {
                     // event.preventDefault();
                     event.stopPropagation();
-                    showPopup(event, person);
+                    // showPopup(event, person);
+
+                    const html = renderPersonBottomSheetHTML(person);
+                    openBottomSheet(html);
                 });
         });
     });
@@ -323,7 +325,10 @@ function renderTree(rootData) {
         .html(d => renderPersonCardHTML(d.data))
         .on("click", (event, d) => {
             event.stopPropagation();
-            showPopup(event, d.data);
+            // showPopup(event, d.data);
+
+            const html = renderPersonBottomSheetHTML(d.data);
+            openBottomSheet(html);
         });
 }
 
@@ -360,6 +365,46 @@ function renderPersonCardHTML(personData) {
         </div>` : ""}
     `;
 }
+
+/**
+ * Helper function to construct bottom sheet data
+ * @param {*} d 
+ * @returns bottom sheet html
+ */
+function renderPersonBottomSheetHTML(personData) {
+  return `
+    <div class="person-sheet">
+        <div class="person-sheet-photo">
+            <img src="${personData.Image}"
+                    onerror="this.onerror=null;this.src='${IMG_BASE_URL}def${personData.Gender}.jpg';" alt="${personData.Name}" />
+        </div>
+
+        <div class="person-sheet-details">
+            <div class="person-name">${personData.Name}</div>
+            <div class="life-line">${renderLifeLine(personData)}</div>
+            ${renderMarriageSection(personData)}
+            ${renderChildrenSection(personData)}
+            ${renderNotesSection(personData)}
+        </div>
+    </div>
+  `;
+}
+
+function renderLifeLine(personData) {
+    return "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</p>";
+}
+
+function renderMarriageSection(personData) {
+    return "<section>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</section><section>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</section><section>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</section>";
+}
+
+function renderChildrenSection(personData) {
+    return "<section>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</section><section>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</section><section>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</section>";
+}
+
+function renderNotesSection(personData) {
+    return "Notes Section";
+}
 // ----
 
 // Node Details Popup Logic
@@ -391,17 +436,17 @@ function showPopup(event, data) {
  * Broken URLs don’t show broken icons
  * Popup stays clean
  */
-popup.on("error", "img", function () {
-  d3.select(this).remove();
-});
+// popup.on("error", "img", function () {
+//   d3.select(this).remove();
+// });
 
 // Close popup when clicking elsewhere
-d3.select("body").on("click", () => {
-    popup.classed("hidden", true);
-});
+// d3.select("body").on("click", () => {
+//     popup.classed("hidden", true);
+// });
 
 // Stop event propagation on popup click
-popup.on("click", event => event.stopPropagation());
+// popup.on("click", event => event.stopPropagation());
 
 /* AUTOCOMPLETE AND SEARCH FUNCTIONALITY */
 
@@ -539,3 +584,64 @@ function clearSearch() {
 
     searchInput.blur(); // optional, good for mobile
 }
+
+/**
+ * ================================
+ * Bottom Sheet (Mobile / Tablet)
+ * ================================ 
+ */
+
+// Cache bottom-sheet elements
+const bottomSheet = document.getElementById("person-bottom-sheet");
+const bottomSheetContent = bottomSheet.querySelector(".bottom-sheet-content");
+const bottomSheetBackdrop = bottomSheet.querySelector(".bottom-sheet-backdrop");
+const bottomSheetCloseBtn = bottomSheet.querySelector(".bottom-sheet-close");
+
+/**
+ * Mobile / Tablet detection helpers 
+ */
+function isMobileOrTablet() {
+  return window.matchMedia("(max-width: 1024px)").matches;
+}
+
+/**
+ * Open bottom sheet
+ * @param {*} html goes into the bottom sheet
+ */
+function openBottomSheet(html) {
+  if (!bottomSheet) return;
+
+  bottomSheetContent.innerHTML = html;
+  bottomSheet.classList.remove("hidden");
+
+  // force reflow so transition works
+  bottomSheet.offsetHeight;
+
+  bottomSheet.classList.add("active");
+}
+
+/**
+ * Close bottom sheet
+ */
+function closeBottomSheet() {
+  if (!bottomSheet) return;
+
+  bottomSheet.classList.remove("active");
+
+  setTimeout(() => {
+    bottomSheet.classList.add("hidden");
+    bottomSheetContent.innerHTML = "";
+  }, 300); // matches CSS transition duration
+}
+
+// Wire close interactions
+bottomSheetBackdrop.addEventListener("click", closeBottomSheet);
+bottomSheetCloseBtn.addEventListener("click", closeBottomSheet);
+
+// Prevent panel clicks from closing sheet
+document
+  .querySelector(".bottom-sheet-panel")
+  .addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+// -----

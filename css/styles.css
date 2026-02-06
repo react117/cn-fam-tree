@@ -226,3 +226,263 @@ svg {
     filter: brightness(1.02);
   }
 }
+
+/* ================
+   | Bottom Sheet |
+   ================ */
+
+.bottom-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+/* hidden by default */
+.bottom-sheet.hidden {
+  display: none;
+}
+
+.person-bottom-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 9999; /* higher than SVG, zoom layers, etc */
+}
+
+/* dark backdrop */
+.bottom-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+/* panel */
+.bottom-sheet-panel {
+  position: absolute;
+  width: 100%;
+  max-height: 70vh;
+  background: #f7f1e3; /* same old-book background */
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.25);
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  bottom: 0;
+  z-index: 2;
+}
+
+/* drag handle */
+.bottom-sheet-handle {
+  width: 40px;
+  height: 5px;
+  background: #bbb;
+  border-radius: 3px;
+  margin: 10px auto 8px;
+}
+
+/* header */
+.bottom-sheet-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 12px 8px;
+}
+
+/* Close button area */
+.bottom-sheet-close {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20%;
+}
+
+.bottom-sheet-close:hover {
+  background: rgba(255, 35, 35, 0.89);
+}
+
+.bottom-sheet-close:active {
+  transform: scale(0.95);
+}
+/* --- */
+
+/* content area */
+.bottom-sheet-content {
+  padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+}
+
+.bottom-sheet.active .bottom-sheet-backdrop {
+  opacity: 1;
+}
+
+.bottom-sheet.active .bottom-sheet-panel {
+  transform: translateY(0);
+}
+
+.person-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.person-sheet-photo {
+  display: flex;
+  justify-content: center;
+}
+
+.person-sheet-photo img {
+  width: 100%;
+  border-radius: 14px;
+}
+
+.person-sheet-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ================================
+   | Person Sheet: MOBILE/ TABLET |
+   ================================ */
+
+@media (max-width: 1023px) {
+  .bottom-sheet-close {
+    font-size: 50px;
+    background: rgb(255, 119, 119);
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .person-sheet-photo {
+    display: flex;
+    justify-content: center;
+  }
+
+  .person-sheet-photo img {
+    width: 100%;
+    height: auto;
+    max-height: 700px;
+    object-fit: contain;
+    border-radius: 10px;
+  }
+
+  .person-sheet-details .person-name {
+    font-size: 50px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .person-sheet-details .life-line {
+    font-size: 35px;
+    opacity: 0.85;
+    text-align: left;
+    line-height: 1.5;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.035);
+  }
+
+  .person-sheet-details section {
+    margin-top: 14px;
+    font-size: 35px;
+    line-height: 1.5;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.035);
+  }
+
+  .bottom-sheet-handle {
+    width: 40px;
+    height: 4px;
+    margin: 8px auto 12px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.25);
+  }
+
+  .bottom-sheet-content {
+    padding-bottom: 32px;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+/* --------- */
+
+/* ================================
+   | Person Sheet: DESKTOP        |
+   ================================ */
+
+@media (min-width: 1024px) {
+  .bottom-sheet-close {
+    font-size: 18px;
+    background: rgb(255, 119, 119);
+    cursor: pointer;
+  }
+
+  .bottom-sheet-panel {
+    max-height: 70vh;
+    padding: 32px 40px;
+    width: 97%;
+  }
+
+  .person-sheet {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 36px;
+  }
+
+  .person-sheet-photo {
+    flex: 0 0 650px;
+    justify-content: flex-start;
+  }
+
+  .person-sheet-photo img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    border-radius: 10px;
+  }
+
+  .person-sheet-details {
+    flex: 1;
+    padding-top: 6px;
+    font-size: 16px;
+  }
+
+  .person-sheet-details .person-name {
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .person-sheet-details .life-line {
+    font-size: 20px;
+    margin-top: 14px;
+    line-height: 1.5;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.035);
+  }
+
+  .person-sheet-details section {
+    font-size: 20px;
+    margin-top: 18px;
+    line-height: 1.5;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.035);
+  }
+}
