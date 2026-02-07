@@ -3,13 +3,14 @@ const WIDTH = 5000;
 const HEIGHT = window.innerHeight;
 const IMG_BASE_URL = "https://raw.githubusercontent.com/react117/cn-fam-tree/master/assets/images/src/";
 const NODE_RADIUS = 32;
-const INITIAL_TRANSLATE_X = WIDTH / 4;
-const INITIAL_TRANSLATE_Y = 100;
+const INITIAL_TRANSLATE_X = IS_MOBILE_OR_TABLET ? WIDTH / 10 : WIDTH / 4;
+const INITIAL_TRANSLATE_Y = 50;
 const TREE_DEFAULT_SCALE = 0.8;
 const CARD_WIDTH = 120;
 const CARD_HEIGHT = 160;
 let searchIndex = null;
 let treeRoot = null;
+let peopleById = new Map();
 
 const svg = d3.select("#tree-container")
     .append("svg")
@@ -22,7 +23,7 @@ const treeGroup = svg.append("g")
 
 // zoom behavior
 const zoom = d3.zoom()
-    .scaleExtent([0.3, 2.5]) // min zoom, max zoom
+    .scaleExtent([0.3, 5]) // min zoom, max zoom
     .filter(event => {
         // Always allow programmatic zoom (search centering)
         if (!event.sourceEvent) return true;
@@ -45,7 +46,7 @@ const zoom = d3.zoom()
 svg.call(
   zoom.transform,
   d3.zoomIdentity
-    .translate(WIDTH / 4, 100)
+    .translate(INITIAL_TRANSLATE_X, 100)
     .scale(TREE_DEFAULT_SCALE)
 );
 
@@ -86,7 +87,7 @@ d3.csv("data/family.csv").then(data => {
  * Pick a root ancestor
 */
 function buildTree(data) {
-    const peopleById = new Map();
+    peopleById.clear();
     const familyByKey = new Map();
 
     // Initialize people
@@ -301,10 +302,9 @@ function renderTree(rootData) {
                 .attr("class", "person-card-wrapper spouse-card")
                 .html(d => renderPersonCardHTML(person))
                 .on("click", (event) => {
-                    // event.preventDefault();
                     event.stopPropagation();
-                    // showPopup(event, person);
-
+                    
+                    // Open bottom sheet
                     const html = renderPersonBottomSheetHTML(person);
                     openBottomSheet(html);
                 });
@@ -325,8 +325,8 @@ function renderTree(rootData) {
         .html(d => renderPersonCardHTML(d.data))
         .on("click", (event, d) => {
             event.stopPropagation();
-            // showPopup(event, d.data);
 
+            // Open bottom sheet
             const html = renderPersonBottomSheetHTML(d.data);
             openBottomSheet(html);
         });
@@ -372,81 +372,222 @@ function renderPersonCardHTML(personData) {
  * @returns bottom sheet html
  */
 function renderPersonBottomSheetHTML(personData) {
-  return `
-    <div class="person-sheet">
-        <div class="person-sheet-photo">
-            <img src="${personData.Image}"
-                    onerror="this.onerror=null;this.src='${IMG_BASE_URL}def${personData.Gender}.jpg';" alt="${personData.Name}" />
-        </div>
+    let bottomSHeetDataHtml = "";
 
-        <div class="person-sheet-details">
-            <div class="person-name">${personData.Name}</div>
-            <div class="life-line">${renderLifeLine(personData)}</div>
-            ${renderMarriageSection(personData)}
-            ${renderChildrenSection(personData)}
-            ${renderNotesSection(personData)}
-        </div>
-    </div>
-  `;
-}
+    bottomSHeetDataHtml +=    `<div class="person-sheet">`;
+    bottomSHeetDataHtml +=        `<div class="person-sheet-photo">`;
+    bottomSHeetDataHtml +=            `<img src="${personData.Image}" onerror="this.onerror=null;this.src='${IMG_BASE_URL}def${personData.Gender}.jpg';" alt="${personData.Name}" />`;
+    bottomSHeetDataHtml +=        `</div>`;
+    bottomSHeetDataHtml +=        `<div class="person-sheet-details">`;
+    
+    if(personData.Name)
+        bottomSHeetDataHtml +=            `<div class="person-name">${personData.Name}</div>`;
 
-function renderLifeLine(personData) {
-    return "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</p>";
-}
+    if(personData.Nickname)
+        bottomSHeetDataHtml +=            `<div class="person-nick-name">${personData.Nickname}</div>`;
 
-function renderMarriageSection(personData) {
-    return "<section>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</section><section>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</section><section>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</section>";
-}
+    if(personData.Profession)
+        bottomSHeetDataHtml +=            `<div class="person-nick-name">${personData.Profession}</div>`;
 
-function renderChildrenSection(personData) {
-    return "<section>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</section><section>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</section><section>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eu nisi id augue maximus faucibus. Donec a ex dignissim neque congue scelerisque. Phasellus gravida tincidunt fringilla. Nullam malesuada placerat nibh nec eleifend. Praesent lectus odio, sodales eu suscipit non, tempor in urna. Fusce fringilla libero sed lectus egestas condimentum. Maecenas nisl eros, sodales ac convallis a, finibus vel lorem. Praesent eu nisi molestie, sollicitudin ligula vel, lobortis massa. Etiam sit amet hendrerit enim. Quisque turpis massa, convallis in euismod et, feugiat id augue. Donec molestie urna ac ante rutrum, eu rutrum est venenatis.</section>";
-}
+    bottomSHeetDataHtml +=            `${renderLifeLine(personData)}`;
+    bottomSHeetDataHtml +=            `${renderParentSection(personData)}`;
+    bottomSHeetDataHtml +=            `${renderMarriageSection(personData)}`;
+    bottomSHeetDataHtml +=            `${renderChildrenSection(personData)}`;
+    bottomSHeetDataHtml +=            `${renderNotesSection(personData)}`;
+    bottomSHeetDataHtml +=        `</div>`;
+    bottomSHeetDataHtml +=    `</div>`;
 
-function renderNotesSection(personData) {
-    return "Notes Section";
-}
-// ----
-
-// Node Details Popup Logic
-const popup = d3.select("#popup");
-
-function showPopup(event, data) {
-    popup
-        .classed("hidden", false)
-        .html(`
-            <img 
-                src="${data.Image}" 
-                alt="${data.Name}" 
-                onerror="this.onerror=null;this.src='${IMG_BASE_URL}def${data.Gender}.jpg';"
-            />
-            <h3>${data.Name}</h3>
-            ${data.Nickname ? `<div class="meta">"${data.Nickname}"</div>` : ""}
-            <div><strong>Gender:</strong> ${data.Gender || "—"}</div>
-            <div><strong>Born:</strong> ${data.YearOfBirth || "—"}</div>
-            <div><strong>Died:</strong> ${data.YearOfDeath || "—"}</div>
-            <div><strong>Profession:</strong> ${data.Profession || "—"}</div>
-            ${data.Notes ? `<div><strong>Notes:</strong> ${data.Notes}</div>` : ""}
-        `)
-        .style("left", `${event.pageX + 10}px`)
-        .style("top", `${event.pageY + 10}px`);
+    return bottomSHeetDataHtml;
 }
 
 /**
- * This ensures:
- * Broken URLs don’t show broken icons
- * Popup stays clean
+ * Helper to render birth/death data on bottom sheet
+ * @param {*} personData 
+ * @returns life line html
  */
-// popup.on("error", "img", function () {
-//   d3.select(this).remove();
-// });
+function renderLifeLine(personData) {
+    let yob = personData.YearOfBirth;
+    let yod = personData.YearOfDeath;
 
-// Close popup when clicking elsewhere
-// d3.select("body").on("click", () => {
-//     popup.classed("hidden", true);
-// });
+    // No data -> render nothing
+    if (!yob && !yod) return "";
 
-// Stop event propagation on popup click
-// popup.on("click", event => event.stopPropagation());
+    let lifeText = "";
+    if (yob && !yod) {
+        const age = new Date().getFullYear() - yob;
+        lifeText = `${yob} · ${age} years`;
+    } else {
+        yob = (!yob) ? `Unknown` : yob;
+        yod = (!yod) ? `Unknown` : yod;
+
+        lifeText = `${yob} – ${yod}`;
+    }
+
+    return `<div class="life-line">${lifeText}</div>`;
+}
+
+/**
+ * Helper to render parent data on bottom sheet
+ * @param {*} personData 
+ * @returns parent html
+ */
+function renderParentSection(personData) {
+    // Guard: only biological persons can have parents
+    if (!personData || (!personData.FatherID && !personData.MotherID)) {
+        return "";
+    }
+
+    const parents = getParentsForPerson(personData);
+    if (!parents.length) return "";
+
+    let label = "";
+    if (personData.Gender === "Male") label = "Responsible Son to";
+    if (personData.Gender === "Female") label = "Responsible Daughter to";
+
+    const parentNames = parents
+        .map(p => p.Name?.split(" ")[0])
+        .filter(Boolean)
+        .join(" and ");
+
+    if (!parentNames) return "";
+
+    return `
+        <section class="person-parents">
+            <div class="relation-block">
+                <div class="relation-icon">🌳</div>
+                <div class="relation-content">
+                    <div class="relation-text">${label}</div>
+                    <div class="relation-value">${parentNames}</div>
+                </div>
+            </div>
+        </section>
+    `;
+}
+
+/**
+ * Helper to render marriage/spouse data on bottom sheet
+ * @param {*} personData 
+ * @returns marriage html
+ */
+function renderMarriageSection(personData) {
+    if (!personData || !Array.isArray(personData._families) || !personData._families.length) {
+        return "";
+    }
+
+    // marriage text
+    let relationLabel = "";
+    if (personData.Gender === "Male") relationLabel = "Loving Husband to";
+    if (personData.Gender === "Female") relationLabel = "Loving Wife to";
+
+    let html = "";
+
+    personData._families.forEach(family => {
+        if (!family.parents || family.parents.length !== 2) return;
+
+        const spouse = family.parents.find(p => p.ID !== personData.ID);
+        if (!spouse) return;
+
+        const spouseName = spouse.Name?.split(" ")[0];
+        if (!spouseName) return;
+
+        // marriage year label
+        const year = personData.YearOfMarriage || null;
+        const marriageLabel = personData.YearOfMarriage ? `<span class="marriage-year">(💍${year})</span>` : "";
+
+        html += `
+            <section class="person-marriage">
+                <div class="relation-block">
+                    <div class="relation-icon">❤️</div>
+                    <div class="relation-content">
+                        <div class="relation-text">${relationLabel}</div>
+                        <div class="relation-value">
+                        ${spouseName}
+                        ${marriageLabel}
+                        </div>
+                    </div>
+                </div>
+            </section>
+        `;
+    });
+
+    return html;
+}
+
+/**
+ * Helper to render children data on bottom sheet
+ * @param {*} personData 
+ * @returns children html
+ */
+function renderChildrenSection(personData) {
+    if (!personData || !Array.isArray(personData._families) || !personData._families.length) return "";
+
+    // get parent relation label
+    let relationLabel = "";
+    if (personData.Gender === "Male") relationLabel = "Proud Father of";
+    if (personData.Gender === "Female") relationLabel = "Proud Mother of";
+
+    let html = "";
+
+    personData._families.forEach(family => {
+        if (!Array.isArray(family.children) || !family.children.length) return;
+
+        const childNames = family.children
+            .map(child => child.Name?.split(" ")[0])
+            .filter(Boolean)
+            .join(", ");
+
+        if (!childNames) return;
+
+        html += `
+            <section class="person-children">
+                <div class="relation-block">
+                <div class="relation-icon">🫶</div>
+                <div class="relation-content">
+                    <div class="relation-text">${relationLabel}</div>
+                    <div class="relation-value">
+                    ${childNames}
+                    </div>
+                </div>
+                </div>
+            </section>
+        `;
+    });
+
+    return html;
+}
+
+/**
+ * Helper to render notes data on bottom sheet
+ * @param {*} personData 
+ * @returns notes html
+ */
+function renderNotesSection(personData) {
+    if (personData.Notes) {
+        return `<section>${personData.Notes}</section>`;
+    } else {
+        return "";
+    }
+}
+
+/**
+ * Helper to resolve parents on demand
+ * @param {*} personData 
+ * @returns 
+ */
+function getParentsForPerson(personData) {
+    const parents = [];
+
+    if (personData.FatherID && peopleById.has(personData.FatherID)) {
+        parents.push(peopleById.get(personData.FatherID));
+    }
+
+    if (personData.MotherID && peopleById.has(personData.MotherID)) {
+        parents.push(peopleById.get(personData.MotherID));
+    }
+
+    return parents;
+}
+// ----
 
 /* AUTOCOMPLETE AND SEARCH FUNCTIONALITY */
 
@@ -530,7 +671,7 @@ function selectPerson(personId) {
     const rect = container.getBoundingClientRect();
 
     const x = rect.width / 2 - targetNode.x * scale;
-    const y = rect.height / 2 - targetNode.y * scale;
+    const y = rect.height / 3 - targetNode.y * scale;
 
     svg.transition()
         .duration(750)
@@ -609,15 +750,20 @@ function isMobileOrTablet() {
  * @param {*} html goes into the bottom sheet
  */
 function openBottomSheet(html) {
-  if (!bottomSheet) return;
+    if (!bottomSheet) return;
 
-  bottomSheetContent.innerHTML = html;
-  bottomSheet.classList.remove("hidden");
+    //   populate content
+    bottomSheetContent.innerHTML = html;
+    bottomSheet.classList.remove("hidden");
 
-  // force reflow so transition works
-  bottomSheet.offsetHeight;
+    // reset scroll position
+    bottomSheetContent.scrollTop = 0;
 
-  bottomSheet.classList.add("active");
+    // force reflow so transition works
+    bottomSheet.offsetHeight;
+
+    // show sheet
+    bottomSheet.classList.add("active");
 }
 
 /**
