@@ -258,8 +258,22 @@ svg {
   background: rgba(0, 0, 0, 0.35);
   opacity: 0;
   transition: opacity 0.25s ease;
-  pointer-events: auto;
+  pointer-events: none;
   z-index: 1;
+}
+
+.bottom-sheet.open + .bottom-sheet-backdrop,
+.bottom-sheet-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#person-bottom-sheet {
+  pointer-events: none;
+}
+
+#person-bottom-sheet.open {
+  pointer-events: auto;
 }
 
 /* panel */
@@ -272,7 +286,7 @@ svg {
   border-top-right-radius: 16px;
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.25);
   transform: translateY(100%);
-  transition: transform 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
   display: flex;
   flex-direction: column;
   pointer-events: auto;
@@ -280,13 +294,22 @@ svg {
   z-index: 2;
 }
 
+#person-bottom-sheet.open .bottom-sheet-panel {
+  transform: translateY(0);
+}
+
 /* drag handle */
 .bottom-sheet-handle {
   width: 40px;
   height: 5px;
-  background: #bbb;
+  background: rgba(0, 0, 0, 0.3);
   border-radius: 3px;
   margin: 10px auto 8px;
+  cursor: grab;
+}
+
+.bottom-sheet-handle:active {
+  cursor: grabbing;
 }
 
 /* header */
@@ -298,8 +321,8 @@ svg {
 
 /* Close button area */
 .bottom-sheet-close {
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -357,7 +380,7 @@ svg {
    | Person Sheet: MOBILE/ TABLET |
    ================================ */
 
-@media (max-width: 1023px) {
+@media (max-width: 1024px) {
   .bottom-sheet-close {
     font-size: 50px;
     background: rgb(255, 119, 119);
@@ -432,11 +455,30 @@ svg {
   }
 
   .bottom-sheet-handle {
-    width: 40px;
-    height: 4px;
-    margin: 8px auto 12px;
-    border-radius: 4px;
+    width: 100px;
+    height: 20px;
+    margin: 12px auto 12px;
+    border-radius: 10px;
     background: rgba(0, 0, 0, 0.25);
+    justify-content: center;
+    transform: translateX(30px);
+    position: relative;
+  }
+
+  .bottom-sheet-header {
+    position: relative;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  /* Invisible hit area */
+  .bottom-sheet-handle::before {
+    content: "";
+    position: absolute;
+    top: -20px;
+    bottom: -20px;
+    left: -40px;
+    right: -40px;
   }
 
   .bottom-sheet-content {
@@ -450,9 +492,9 @@ svg {
    | Person Sheet: DESKTOP        |
    ================================ */
 
-@media (min-width: 1024px) {
+@media (min-width: 1025px) {
   .bottom-sheet-close {
-    font-size: 18px;
+    font-size: 40px;
     background: rgb(255, 119, 119);
     cursor: pointer;
   }
@@ -460,7 +502,7 @@ svg {
   .bottom-sheet-panel {
     max-height: 70vh;
     padding: 32px 40px;
-    width: 97%;
+    width: 96%;
   }
 
   .person-sheet {

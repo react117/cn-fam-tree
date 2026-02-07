@@ -441,8 +441,8 @@ function renderParentSection(personData) {
     if (!parents.length) return "";
 
     let label = "";
-    if (personData.Gender === "Male") label = "Responsible Son to";
-    if (personData.Gender === "Female") label = "Responsible Daughter to";
+    if (personData.Gender === "Male") label = "Responsible Son of";
+    if (personData.Gender === "Female") label = "Responsible Daughter of";
 
     const parentNames = parents
         .map(p => p.Name?.split(" ")[0])
@@ -476,8 +476,8 @@ function renderMarriageSection(personData) {
 
     // marriage text
     let relationLabel = "";
-    if (personData.Gender === "Male") relationLabel = "Loving Husband to";
-    if (personData.Gender === "Female") relationLabel = "Loving Wife to";
+    if (personData.Gender === "Male") relationLabel = "Loving Husband of";
+    if (personData.Gender === "Female") relationLabel = "Loving Wife of";
 
     let html = "";
 
@@ -734,8 +734,10 @@ function clearSearch() {
 
 // Cache bottom-sheet elements
 const bottomSheet = document.getElementById("person-bottom-sheet");
+const bottomSheetPanel = bottomSheet.querySelector(".bottom-sheet-panel");
 const bottomSheetContent = bottomSheet.querySelector(".bottom-sheet-content");
 const bottomSheetBackdrop = bottomSheet.querySelector(".bottom-sheet-backdrop");
+const bottomSheetHandle = bottomSheet.querySelector(".bottom-sheet-handle");
 const bottomSheetCloseBtn = bottomSheet.querySelector(".bottom-sheet-close");
 
 /**
@@ -763,21 +765,77 @@ function openBottomSheet(html) {
     bottomSheet.offsetHeight;
 
     // show sheet
-    bottomSheet.classList.add("active");
+    bottomSheet.classList.add("open");
+    bottomSheetBackdrop.classList.add("active");
+}
+
+/**
+ * Bottom sheet drag handle
+ */
+function enableBottomSheetDragToClose() {
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
+
+    function onStart(e) {
+        isDragging = true;
+        startY = e.touches ? e.touches[0].clientY : e.clientY;
+        bottomSheetPanel.style.transition = "none";
+    }
+
+    function onMove(e) {
+        if (!isDragging) return;
+
+        currentY = e.touches ? e.touches[0].clientY : e.clientY;
+        const deltaY = Math.max(0, currentY - startY);
+
+        bottomSheetPanel.style.transform = `translateY(${deltaY}px)`;
+    }
+
+    function onEnd() {
+        if (!isDragging) return;
+        isDragging = false;
+
+        const deltaY = currentY - startY;
+        const closeThreshold = 120;
+
+        // clear inline transform control
+        bottomSheetPanel.style.transition = "transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1)";
+
+        if (deltaY > closeThreshold) {
+            closeBottomSheet(0);
+        } else {
+            bottomSheetPanel.style.transform = "translateY(0)";
+        }
+    }
+
+    // Touch
+    bottomSheetHandle.addEventListener("touchstart", onStart);
+    bottomSheetHandle.addEventListener("touchmove", onMove);
+    bottomSheetHandle.addEventListener("touchend", onEnd);
+
+    // Mouse
+    bottomSheetHandle.addEventListener("mousedown", onStart);
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onEnd);
 }
 
 /**
  * Close bottom sheet
  */
-function closeBottomSheet() {
-  if (!bottomSheet) return;
+function closeBottomSheet(timeout) {
+    if (!bottomSheet) return;
+    if(typeof timeout === 'object') timeout = 350;
 
-  bottomSheet.classList.remove("active");
+    bottomSheet.classList.remove("open");
+    bottomSheetBackdrop.classList.remove("active");
 
-  setTimeout(() => {
-    bottomSheet.classList.add("hidden");
-    bottomSheetContent.innerHTML = "";
-  }, 300); // matches CSS transition duration
+    // wait for animation to finish before cleanup
+    setTimeout(() => {
+        bottomSheetContent.innerHTML = "";
+        bottomSheetPanel.style.transform = "";
+        bottomSheetPanel.style.transition = "";
+    }, timeout);
 }
 
 // Wire close interactions
@@ -791,3 +849,6 @@ document
     e.stopPropagation();
   });
 // -----
+
+// enable drag handle
+enableBottomSheetDragToClose();
