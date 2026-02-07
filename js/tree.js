@@ -76,6 +76,8 @@ d3.csv("data/family.csv").then(data => {
         raw: person
     }));
 
+    console.log(data);
+
     buildTree(data);
 });
 
@@ -93,7 +95,7 @@ function buildTree(data) {
     // Initialize people
     data.forEach(person => {
         person.children = [];
-        person._families = [];
+        person._marriages = [];
         peopleById.set(person.ID, person);
     });
 
@@ -118,15 +120,15 @@ function buildTree(data) {
         if (!familyByKey.has(key)) {
             familyNode = {
                 ID: `FAM_${key}`,
-                type: "family",
-                parents: [father, mother],
+                type: "marriage",
+                partners: [father, mother],
                 children: []
             };
 
             familyByKey.set(key, familyNode);
 
-            father._families.push(familyNode);
-            mother._families.push(familyNode);
+            father._marriages.push(familyNode);
+            mother._marriages.push(familyNode);
 
             // mark spouse persons once
             father._isSpouse = true;
@@ -150,15 +152,15 @@ function buildTree(data) {
         if (!familyByKey.has(key)) {
             const familyNode = {
                 ID: `FAM_${key}`,
-                type: "family",
-                parents: [person, spouse],
+                type: "marriage",
+                partners: [person, spouse],
                 children: []
             };
 
             familyByKey.set(key, familyNode);
 
-            person._families.push(familyNode);
-            spouse._families.push(familyNode);
+            person._marriages.push(familyNode);
+            spouse._marriages.push(familyNode);
 
             person._isSpouse = true;
             spouse._isSpouse = true;
@@ -179,9 +181,10 @@ function buildTree(data) {
  * Convert graph → tree
  * 
  * this function creates a valid tree:
- * Person
- * └── Family
- *     └── Child
+ * Person (descendant)
+ *  └── MarriageLink
+ *       ├── Spouse (rendered next to descendant)
+ *       └── Child
  * 
  * The virtual family node: 
  * - Do not exist in CSV
@@ -190,11 +193,11 @@ function buildTree(data) {
  * - Act as the only parent of children
  * 
  * @param {*} person 
- * @returns each person as a node introducing _families
+ * @returns each person as a node introducing _marriages
  * 
- * @array person._families def
+ * @array person._marriages def
  * If: FatherID = P001 && MotherID = P002
- * We create: _families with ID: FAM_P001_P002
+ * We create: _marriages with ID: FAM_P001_P002
  * 
  * A family node has exactly 2 parents
  * A child always attaches to a family node, not any single parent
@@ -207,18 +210,18 @@ function buildHierarchy(person) {
         children: []
     };
 
-    if (person._families) {
-        person._families.forEach(family => {
-            const familyNode = {
-                ID: family.ID,
-                type: "family",
-                parents: family.parents, // KEEP parents
-                children: family.children.map(child =>
+    if (person._marriages) {
+        person._marriages.forEach(marriage => {
+            const marriageNode = {
+                ID: marriage.ID,
+                type: "marriage",
+                partners: marriage.partners,
+                children: marriage.children.map(child =>
                     buildHierarchy(child)
                 )
             };
-            
-            node.children.push(familyNode);
+
+            node.children.push(marriageNode);
         });
     }
 
@@ -265,7 +268,7 @@ function renderTree(rootData) {
         .enter()
         .append("g")
         .attr("class", d =>
-            d.data.type === "family" ? "node family-node" : "node person-node"
+            d.data.type === "marriage" ? "node family-node" : "node person-node"
         )
         .attr("transform", d => `translate(${d.x},${d.y})`)
         .attr("data-person-id", d => d.data.ID);
@@ -275,10 +278,10 @@ function renderTree(rootData) {
     const FO_PADDING = 30;
 
     // render family nodes | married | have children
-    node.filter(d => d.data.type === "family")
+    node.filter(d => d.data.type === "marriage")
     .each(function (d) {
         const familyGroup = d3.select(this);
-        const spouses = d.data.parents || [];
+        const spouses = d.data.type === "marriage" ? d.data.partners : [];
 
         const spouseOffset = 80;
 
@@ -314,7 +317,7 @@ function renderTree(rootData) {
 
     // render single people nodes | not married | no children
     node
-        .filter(d => d.data.type !== "family" && !d.data._isSpouse)
+        .filter(d => d.data.type !== "marriage" && !d.data._isSpouse)
         .append("foreignObject")
         .attr("x", -(CARD_WIDTH / 2) - FO_PADDING)
         .attr("y", -(CARD_HEIGHT / 2) - FO_PADDING)
@@ -470,7 +473,7 @@ function renderParentSection(personData) {
  * @returns marriage html
  */
 function renderMarriageSection(personData) {
-    if (!personData || !Array.isArray(personData._families) || !personData._families.length) {
+    if (!personData || !Array.isArray(personData._marriages) || !personData._marriages.length) {
         return "";
     }
 
@@ -481,10 +484,10 @@ function renderMarriageSection(personData) {
 
     let html = "";
 
-    personData._families.forEach(family => {
-        if (!family.parents || family.parents.length !== 2) return;
+    personData._marriages.forEach(family => {
+        if (!family.partners || family.partners.length !== 2) return;
 
-        const spouse = family.parents.find(p => p.ID !== personData.ID);
+        const spouse = family.partners.find(p => p.ID !== personData.ID);
         if (!spouse) return;
 
         const spouseName = spouse.Name?.split(" ")[0];
@@ -519,7 +522,7 @@ function renderMarriageSection(personData) {
  * @returns children html
  */
 function renderChildrenSection(personData) {
-    if (!personData || !Array.isArray(personData._families) || !personData._families.length) return "";
+    if (!personData || !Array.isArray(personData._marriages) || !personData._marriages.length) return "";
 
     // get parent relation label
     let relationLabel = "";
@@ -528,7 +531,7 @@ function renderChildrenSection(personData) {
 
     let html = "";
 
-    personData._families.forEach(family => {
+    personData._marriages.forEach(family => {
         if (!Array.isArray(family.children) || !family.children.length) return;
 
         const childNames = family.children
@@ -648,7 +651,7 @@ function findNodeForPerson(personId) {
         if (data.ID === personId) return true;
 
         // family node containing this person
-        if (Array.isArray(data.parents) && data.parents.map(item => item.ID).includes(personId)) {
+        if (Array.isArray(data.partners) && data.partners.map(item => item.ID).includes(personId)) {
             return true;
         }
 
