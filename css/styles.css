@@ -376,6 +376,23 @@ svg {
   gap: 10px;
 }
 
+.marriage-links-layer {
+  pointer-events: none;
+}
+
+.marriage-line {
+  stroke: #1a9f02;
+  stroke-width: 3px;
+}
+
+.marriage-label {
+  font-size: 12px;
+  font-weight: bold;
+  fill: #d72387;
+  text-anchor: middle;
+  dominant-baseline: auto;
+}
+
 /* ================================
    | Person Sheet: MOBILE/ TABLET |
    ================================ */

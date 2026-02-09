@@ -21,6 +21,9 @@ const svg = d3.select("#tree-container")
 const treeGroup = svg.append("g")
     .attr("class", "tree-container");
 
+// marriage links layer
+let marriageLinksGroup;
+
 // zoom behavior
 const zoom = d3.zoom()
     .scaleExtent([0.3, 5]) // min zoom, max zoom
@@ -76,8 +79,6 @@ d3.csv("data/family.csv").then(data => {
         raw: person
     }));
 
-    console.log(data);
-
     buildTree(data);
 });
 
@@ -121,6 +122,7 @@ function buildTree(data) {
             familyNode = {
                 ID: `FAM_${key}`,
                 type: "marriage",
+                marriageDate : child.YearOfMarriage,
                 partners: [father, mother],
                 children: []
             };
@@ -153,6 +155,7 @@ function buildTree(data) {
             const familyNode = {
                 ID: `FAM_${key}`,
                 type: "marriage",
+                marriageDate : person.YearOfMarriage,
                 partners: [person, spouse],
                 children: []
             };
@@ -215,6 +218,7 @@ function buildHierarchy(person) {
             const marriageNode = {
                 ID: marriage.ID,
                 type: "marriage",
+                marriageDate : person.YearOfMarriage,
                 partners: marriage.partners,
                 children: marriage.children.map(child =>
                     buildHierarchy(child)
@@ -244,7 +248,7 @@ function renderTree(rootData) {
     const root = treeRoot = d3.hierarchy(rootData);
 
     const treeLayout = d3.tree()
-        .nodeSize([180, 200]); // [horizontal spacing (siblings / cousins), vertical spacing (generations)]
+        .nodeSize([220, 200]); // [horizontal spacing (siblings / cousins), vertical spacing (generations)]
 
     treeLayout(root);
 
@@ -258,6 +262,11 @@ function renderTree(rootData) {
             .x(d => d.x)
             .y(d => d.y)
         );
+
+    // marriage links layer (below cards, above background)
+    marriageLinksGroup = treeGroup
+        .append("g")
+        .attr("class", "marriage-links-layer");
 
     // Nodes
     // Family nodes (the virtual nodes) are small gray dots
@@ -281,36 +290,63 @@ function renderTree(rootData) {
     node.filter(d => d.data.type === "marriage")
     .each(function (d) {
         const familyGroup = d3.select(this);
-        const spouses = d.data.type === "marriage" ? d.data.partners : [];
 
-        const spouseOffset = 80;
+        const spouses = d.data.type === "marriage" ? d.data.partners : [];
+        const spouseXOffset = 160;
 
         spouses.forEach((person, index) => {
-            const xOffset =
-            spouses.length === 1 ? 0 :
-            index === 0 ? -spouseOffset : spouseOffset;
+            const spouseYOffset = person.ID === "P001" || person.ID === "P002" 
+                ? -180 
+                : person._marriages[0].children.length === 0 
+                    ? 0 : - 100;
 
-            const personGroup = familyGroup.append("g")
-                .attr("class", "spouse-node")
-                .attr("transform", `translate(${xOffset}, -50)`)
-                .attr("data-person-id", person.ID);
+            // determine whether current node is spouse --> FatherID === P000 && MotherID === P000 
+            // if yes render to the side
+            if(person.FatherID === 'P000' && person.MotherID === 'P000') {
+                const personGroup = familyGroup.append("g")
+                    .attr("class", "spouse-node")
+                    .attr("transform", `translate(${spouseXOffset}, ${spouseYOffset})`)
+                    .attr("data-person-id", person.ID)
+                    .attr("data-marriage-id", person._marriages[0].ID);
 
-            personGroup
-                .append("foreignObject")
-                .attr("x", -(CARD_WIDTH / 2) - FO_PADDING)
-                .attr("y", -(CARD_HEIGHT / 2) - FO_PADDING)
-                .attr("width", CARD_WIDTH + FO_PADDING * 2)
-                .attr("height", CARD_HEIGHT + FO_PADDING * 2)
-                .append("xhtml:div")
-                .attr("class", "person-card-wrapper spouse-card")
-                .html(d => renderPersonCardHTML(person))
-                .on("click", (event) => {
-                    event.stopPropagation();
-                    
-                    // Open bottom sheet
-                    const html = renderPersonBottomSheetHTML(person);
-                    openBottomSheet(html);
-                });
+                personGroup
+                    .append("foreignObject")
+                    .attr("x", -(CARD_WIDTH / 2) - FO_PADDING)
+                    .attr("y", -(CARD_HEIGHT / 2) - FO_PADDING)
+                    .attr("width", CARD_WIDTH + FO_PADDING * 2)
+                    .attr("height", CARD_HEIGHT + FO_PADDING * 2)
+                    .append("xhtml:div")
+                    .attr("class", "person-card-wrapper spouse-card")
+                    .html(d => renderPersonCardHTML(person))
+                    .on("click", (event) => {
+                        event.stopPropagation();
+                        
+                        // Open bottom sheet
+                        const html = renderPersonBottomSheetHTML(person);
+                        openBottomSheet(html);
+                    });
+            } else { // render biological child at family node location
+                const bioGroup = familyGroup.append("g")
+                    .attr("class", "spouse-node")
+                    .attr("transform", `translate(0, ${spouseYOffset})`)
+                    .attr("data-person-id", person.ID)
+                    .attr("data-marriage-id", person._marriages[0].ID);
+
+                bioGroup
+                    .append("foreignObject")
+                    .attr("x", -(CARD_WIDTH / 2) - FO_PADDING)
+                    .attr("y", -(CARD_HEIGHT / 2) - FO_PADDING)
+                    .attr("width", CARD_WIDTH + FO_PADDING * 2)
+                    .attr("height", CARD_HEIGHT + FO_PADDING * 2)
+                    .append("xhtml:div")
+                    .attr("class", "person-card-wrapper spouse-card")
+                    .html(() => renderPersonCardHTML(person))
+                    .on("click", (event) => {
+                        event.stopPropagation();
+                        const html = renderPersonBottomSheetHTML(person);
+                        openBottomSheet(html);
+                    });
+            }
         });
     });
     // ------
@@ -333,6 +369,81 @@ function renderTree(rootData) {
             const html = renderPersonBottomSheetHTML(d.data);
             openBottomSheet(html);
         });
+    
+    // marriage link renders 
+    renderMarriageLinks();
+}
+
+/**
+ * Helper to get node wise spouse center position
+ * @param {*} nodeEl 
+ * @returns x and y co-ordinates
+ */
+function getCardCenter(nodeEl) {
+  const rect = nodeEl.getBoundingClientRect();
+  const svgRect = svg.node().getBoundingClientRect();
+
+  // screen → svg root
+  const x = rect.left + rect.width / 2 - svgRect.left;
+  const y = rect.top + rect.height / 2 - svgRect.top;
+
+  // svg root → treeGroup (undo zoom/pan)
+  const t = d3.zoomTransform(treeGroup.node());
+
+  return {
+    x: (x - t.x) / t.k,
+    y: (y - t.y) / t.k
+  };
+}
+
+/**
+ * Helper to render marriage links between spouses
+ */
+function renderMarriageLinks() {
+    marriageLinksGroup.selectAll("*").remove();
+
+    const marriageNodes = treeRoot.descendants().filter(
+        d => d.data.type === "marriage"
+    );
+
+    marriageNodes.forEach(mNode => {
+        const marriageId = mNode.data.ID;
+        const marriageDate = mNode.data.marriageDate;
+        const marriageText = marriageDate ? `💍${marriageDate}` : `Married`;
+
+        // Find spouse cards belonging to THIS marriage
+        const spouseNodes = treeGroup
+            .selectAll(`.spouse-node[data-marriage-id="${marriageId}"]`)
+            .nodes();
+
+        if (spouseNodes.length !== 2) return;
+
+        const [aNode, bNode] = spouseNodes;
+
+        const a = getCardCenter(aNode);
+        const b = getCardCenter(bNode);
+
+        const left = a.x < b.x ? a : b;
+        const right = a.x < b.x ? b : a;
+
+        const midX = (left.x + right.x) / 2;
+        const midY = (left.y + right.y) / 2;
+
+        marriageLinksGroup
+            .append("line")
+            .attr("class", "marriage-line")
+            .attr("x1", left.x)
+            .attr("y1", left.y)
+            .attr("x2", right.x)
+            .attr("y2", right.y);
+
+        marriageLinksGroup
+            .append("text")
+            .attr("class", "marriage-label")
+            .attr("x", midX)
+            .attr("y", midY - 8)
+            .text(marriageText);
+    });
 }
 
 /**
