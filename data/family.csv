@@ -1,7 +1,7 @@
 ID,Name,Nickname,Gender,YearOfBirth,YearOfDeath,Profession,FatherID,MotherID,MarriedToID,YearOfMarriage,ImgPosX,ImgPosY,CardPosX,CardPosY,Notes
 P001,Nishi Kanta Bhattacharya,,Male,[Unclear],1963,,,,P002,,,,,,
 P002,Binod Bala Debi,,Female,[Unclear],[Unclear],,P000,P000,P001,,,,,,
-P003,Ashutosh Bhattacharyya,,Male,1937,2004,Teacher,P001,P002,P004,,,0,,,
+P003,Ashutosh Bhattacharyya,,Male,1916,2000,Teacher,P001,P002,P004,,,0,,,
 P004,Radha Rani Bhattacharyya,,Female,1926,2026,Homemaker,P000,P000,P003,,,35,,,
 P005,Pramathes Bhattacharya,,Male,1927,1997,,P001,P002,P006,,,,,,
 P006,Usharani Bhattacharya,,Female,1925,2011,Homemaker,P000,P000,P005,,,,,,
