@@ -11,10 +11,10 @@
   </head>
 
   <body>
-    <h1>Family Tree</h1>
+    <!-- <h1>Family Tree</h1> -->
 
     <!-- Search -->
-    <div id="search-container">
+    <!-- <div id="search-container">
       <input
           id="search-input"
           type="text"
@@ -23,7 +23,73 @@
       />
       <button id="clear-search-btn" aria-label="Clear Search">✕</button>
       <div id="search-results"></div>
-    </div>
+    </div> -->
+
+    <!-- App Header -->
+    <header id="app-header">
+      <div class="header-left">
+        🌳 <span class="app-title">CN Family Tree</span>
+      </div>
+
+      <div class="header-center">
+        <!-- Search will live here on desktop -->
+        <div id="search-container">
+          <input
+            id="search-input"
+            type="text"
+            placeholder="Search name or nickname…"
+            autocomplete="off"
+          />
+          <button id="clear-search-btn" aria-label="Clear Search">✕</button>
+          <div id="search-results"></div>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="made-with-love">
+          <span class="love-text">
+            Made with ❤️ by
+            <a
+              href="https://github.com/react117"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="love-link"
+            >
+              react117
+            </a>
+            <a
+            href="https://github.com/react117/cn-fam-tree"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="github-btn"
+            aria-label="GitHub profile"
+          >
+            <img
+              src="assets/core/img/github.svg"
+              alt=""
+              class="github-icon-img"
+            />
+          </a>
+
+          </span>
+
+          <div class="love-tooltip">
+            <ul>
+              <li>Version <span class="tool-maintainers">v1.0.0</span></li>
+              <li>Website maintained by <span class="tool-maintainers">react117</span></li>
+              <li>Data maintained by <span class="tool-maintainers">Surjya Sarathi Bhattacharyya</span></li>
+              <li>Expanded on the data structured by <span class="tool-maintainers">Sutirtho Sen</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+
+    </header>
+
+    <!-- Mobile Search Row -->
+    <div id="mobile-search-row"></div>
+
 
     <!-- Tree -->
     <div id="tree-container"></div>
@@ -56,6 +122,6 @@
       </div>
     </div>
 
-    <script src="js/tree.js"></script>
+    <script type="module" src="js/tree.js"></script>
   </body>
 </html>

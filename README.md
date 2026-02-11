@@ -8,15 +8,17 @@ This project converts a structured CSV of family data into a hierarchical JSON f
 
 ## 🎯 Project Goals
 
-- Visualize a family tree of ~80 people
+- Visualize a family tree of ~80+ people
 - Maintain all data in a **single CSV source of truth**
 - Render a **horizontal, generation-based tree**
+- Ensure **correct family and marriage semantics**
 - Support:
   - Zoom & pan
-  - Clickable nodes
-  - Detailed popups per family member
+  - Search with autocomplete
+  - Clickable nodes with detailed views
+- Work seamlessly on **desktop and mobile**
 - Host for free using **GitHub Pages**
-- Version control all data and images using **GitHub**
+- Version control all data and assets using **GitHub**
 
 ---
 
@@ -24,8 +26,32 @@ This project converts a structured CSV of family data into a hierarchical JSON f
 
 - **D3.js (v7)** – Tree layout & SVG rendering
 - **HTML / CSS / JavaScript** – Static frontend
-- **Node.js** – One-time CSV → JSON conversion
 - **GitHub Pages** – Free static hosting
+
+---
+
+## ✨ Key Features
+
+### 🌳 Family Tree Visualization
+- Horizontal, generation-based layout
+- Correct parent-child and spouse relationships
+- Dedicated marriage modeling
+
+### 🔍 Search
+- Search by name or nickname
+- Autocomplete results
+- Pan & zoom to selected person
+
+### 📱 Mobile Support
+- Responsive header and search placement
+- Mobile bottom sheet for person details
+- Touch-friendly interactions
+- Stable keyboard behavior on mobile browsers
+
+### 🧾 Person Details
+- Click or tap a node to view full details
+- Profession, lifespan, notes, and relationships
+- Optimized layout for both desktop and mobile
 
 ---
 
@@ -74,15 +100,22 @@ Each row represents one person.
 | `FatherID` | ID of father (**nullable**) |
 | `MotherID` | ID of mother (**nullable**) |
 | `MarriedToID` | ID of spouse (**nullable**) |
+| `YearOfMarriage` | Marriage year (**optional**) |
+| `ImgPosX` | Horizontal image position offset (**nullable**) |
+| `ImgPosY` | Vertical image position offset (**nullable**) |
+| `CardPosX` | Horizontal person-card position offset (**nullable**) |
+| `CardPosY` | Horizontal person-card position offset (**nullable**) |
 | `Notes` | Additional notes |
+
+,,,,
 
 ### Example
 
 ```csv
-ID,Name,Gender,YearOfBirth,FatherID,MotherID,Notes
-P001,Ram Kumar,Male,1945,,,,
-P002,Sita Devi,Female,1950,,,,
-P003,Amit Kumar,Male,1975,P001,P002,
+ID,Name,Gender,YearOfBirth,FatherID,MotherID,MarriedToID,YearOfMarriage,ImgPosX,ImgPosY,CardPosX,CardPosY,Notes
+P001,Ram Kumar,Male,1945,,,,,,,,,,
+P002,Sita Devi,Female,1950,,,,,,,,,,
+P003,Amit Kumar,Male,1975,P001,P002,,,,,,,
 ```
 
 ---
@@ -90,10 +123,12 @@ P003,Amit Kumar,Male,1975,P001,P002,
 ## 🧠 How It Works
 
 1. `family.csv` is loaded using `d3.csv()`
-2. Each person is mapped by `ID`
-3. Parent-child relationships are built using `FatherID` and `MotherID`
-4. D3’s `tree()` layout renders the hierarchy
-5. Clicking a node opens a popup with full details
+2. Each person is indexed by `ID`
+3. Parent-child relationships are constructed
+4. Marriage relationships are modeled separately
+5. D3’s `tree()` layout computes node positions
+6. SVG nodes and links are rendered
+7. User interactions (search, click, pan, zoom) update the view dynamically
 
 ---
 
@@ -104,7 +139,7 @@ Images are stored in the `GitHub repository`
 Referenced using raw GitHub URLs:
 
 ```java
-https://raw.githubusercontent.com/<username>/<repo>/main/assets/images/photo.jpg
+https://raw.githubusercontent.com/<username>/<repo>/main/assets/images/src/photo.jpg
 ```
 
 This keeps everything version-controlled and works seamlessly with GitHub Pages.
@@ -117,7 +152,7 @@ Because browsers block local CSV loading, use a simple local server:
 
 ### Option 1: VS Code Live Server
 
-- Install Live Server extension
+- Install Live Server extension (`Vscode`)
 - Right-click `index.html` → Open with Live Server
 
 ### Option 2: Python
@@ -137,7 +172,7 @@ http://localhost:8000
 1. Push the repository to GitHub
 2. Go to Settings → Pages
 3. Select:
-    - Source: main
+    - Source: master
     - Folder: /root
 4. Save
 
@@ -146,3 +181,9 @@ http://localhost:8000
 ```java
 https://<username>.github.io/<repo-name>/
 ```
+
+## ❤️ Credits
+
+- Built & maintained by **[react117](https://github.com/react117)**
+- Data maintained by **Surjya Sarathi Bhattacharyya**
+- Expanded on the data structured by **[Sutirtho Sen](https://github.com/sutirsen)**

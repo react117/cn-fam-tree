@@ -4,7 +4,7 @@ const HEIGHT = window.innerHeight;
 const IMG_BASE_URL = "https://raw.githubusercontent.com/react117/cn-fam-tree/master/assets/images/src/";
 const NODE_RADIUS = 32;
 const INITIAL_TRANSLATE_X = IS_MOBILE_OR_TABLET ? WIDTH / 10 : WIDTH / 4;
-const INITIAL_TRANSLATE_Y = 50;
+const INITIAL_TRANSLATE_Y = 150;
 const TREE_DEFAULT_SCALE = 0.8;
 const CARD_WIDTH = 120;
 const CARD_HEIGHT = 160;
@@ -78,6 +78,8 @@ d3.csv("data/family.csv").then(data => {
         image: person.Image,
         raw: person
     }));
+
+    // console.log(data);
 
     buildTree(data);
 });
@@ -248,7 +250,7 @@ function renderTree(rootData) {
     const root = treeRoot = d3.hierarchy(rootData);
 
     const treeLayout = d3.tree()
-        .nodeSize([220, 200]); // [horizontal spacing (siblings / cousins), vertical spacing (generations)]
+        .nodeSize([250, 200]); // [horizontal spacing (siblings / cousins), vertical spacing (generations)]
 
     treeLayout(root);
 
@@ -258,10 +260,19 @@ function renderTree(rootData) {
         .enter()
         .append("path")
         .attr("class", "link")
-        .attr("d", d3.linkVertical()
-            .x(d => d.x)
-            .y(d => d.y)
-        );
+        .attr("d", d => {
+            let cardPosX =  d.target.data.CardPosX ? Number(d.target.data.CardPosX) : 0;
+            let cardPosY =  d.target.data.CardPosY ? Number(d.target.data.CardPosY) : 0;
+
+            return `M${d.source.x},${d.source.y}
+                    V${(d.source.y + d.target.y) / 2}
+                    H${d.target.x + cardPosX}
+                    V${d.target.y + cardPosY}`;
+        });
+        // .attr("d", d3.linkVertical()
+        //     .x(d => d.x)
+        //     .y(d => d.y)
+        // );
 
     // marriage links layer (below cards, above background)
     marriageLinksGroup = treeGroup
@@ -292,61 +303,41 @@ function renderTree(rootData) {
         const familyGroup = d3.select(this);
 
         const spouses = d.data.type === "marriage" ? d.data.partners : [];
-        const spouseXOffset = 160;
 
         spouses.forEach((person, index) => {
+            // determine whether current node is spouse --> FatherID === P000 && MotherID === P000 
+            // if yes render to the side with X-offset
+            const spouseXOffset = (person.FatherID === 'P000' 
+                && person.MotherID === 'P000') 
+                ? 170 : 0;
+
             const spouseYOffset = person.ID === "P001" || person.ID === "P002" 
                 ? -180 
                 : person._marriages[0].children.length === 0 
                     ? 0 : - 100;
 
-            // determine whether current node is spouse --> FatherID === P000 && MotherID === P000 
-            // if yes render to the side
-            if(person.FatherID === 'P000' && person.MotherID === 'P000') {
-                const personGroup = familyGroup.append("g")
+            const personGroup = familyGroup.append("g")
                     .attr("class", "spouse-node")
                     .attr("transform", `translate(${spouseXOffset}, ${spouseYOffset})`)
                     .attr("data-person-id", person.ID)
                     .attr("data-marriage-id", person._marriages[0].ID);
 
-                personGroup
-                    .append("foreignObject")
-                    .attr("x", -(CARD_WIDTH / 2) - FO_PADDING)
-                    .attr("y", -(CARD_HEIGHT / 2) - FO_PADDING)
-                    .attr("width", CARD_WIDTH + FO_PADDING * 2)
-                    .attr("height", CARD_HEIGHT + FO_PADDING * 2)
-                    .append("xhtml:div")
-                    .attr("class", "person-card-wrapper spouse-card")
-                    .html(d => renderPersonCardHTML(person))
-                    .on("click", (event) => {
-                        event.stopPropagation();
-                        
-                        // Open bottom sheet
-                        const html = renderPersonBottomSheetHTML(person);
-                        openBottomSheet(html);
-                    });
-            } else { // render biological child at family node location
-                const bioGroup = familyGroup.append("g")
-                    .attr("class", "spouse-node")
-                    .attr("transform", `translate(0, ${spouseYOffset})`)
-                    .attr("data-person-id", person.ID)
-                    .attr("data-marriage-id", person._marriages[0].ID);
-
-                bioGroup
-                    .append("foreignObject")
-                    .attr("x", -(CARD_WIDTH / 2) - FO_PADDING)
-                    .attr("y", -(CARD_HEIGHT / 2) - FO_PADDING)
-                    .attr("width", CARD_WIDTH + FO_PADDING * 2)
-                    .attr("height", CARD_HEIGHT + FO_PADDING * 2)
-                    .append("xhtml:div")
-                    .attr("class", "person-card-wrapper spouse-card")
-                    .html(() => renderPersonCardHTML(person))
-                    .on("click", (event) => {
-                        event.stopPropagation();
-                        const html = renderPersonBottomSheetHTML(person);
-                        openBottomSheet(html);
-                    });
-            }
+            personGroup
+                .append("foreignObject")
+                .attr("x", -(CARD_WIDTH / 2) - FO_PADDING)
+                .attr("y", -(CARD_HEIGHT / 2) - FO_PADDING)
+                .attr("width", CARD_WIDTH + FO_PADDING * 2)
+                .attr("height", CARD_HEIGHT + FO_PADDING * 2)
+                .append("xhtml:div")
+                .attr("class", "person-card-wrapper spouse-card")
+                .html(d => renderPersonCardHTML(person))
+                .on("click", (event) => {
+                    event.stopPropagation();
+                    
+                    // Open bottom sheet
+                    const html = renderPersonBottomSheetHTML(person);
+                    openBottomSheet(html);
+                });
         });
     });
     // ------
@@ -355,8 +346,12 @@ function renderTree(rootData) {
     node
         .filter(d => d.data.type !== "marriage" && !d.data._isSpouse)
         .append("foreignObject")
-        .attr("x", -(CARD_WIDTH / 2) - FO_PADDING)
-        .attr("y", -(CARD_HEIGHT / 2) - FO_PADDING)
+        .attr("x", d =>
+            - (CARD_WIDTH / 2) - FO_PADDING + Number(d.data.CardPosX)
+        )
+        .attr("y", d =>
+            - (CARD_HEIGHT / 2) - FO_PADDING + Number(d.data.CardPosY)
+        )
         .attr("width", CARD_WIDTH + FO_PADDING * 2)
         .attr("height", CARD_HEIGHT + FO_PADDING * 2)
         .append("xhtml:div")
@@ -468,10 +463,14 @@ function renderPersonCardHTML(personData) {
         lifeText = `${yob} – ${yod}`;
     }
 
+    // custom image offset
+    const imgPosX = personData.ImgPosX ? personData.ImgPosX : 80;
+    const imgPosY = personData.ImgPosY ? personData.ImgPosY : 20;
+
     return `
         <div class="person-card">
             <div class="card-image">
-                <img src="${personData.Image}"
+                <img src="${personData.Image}" style="object-position: ${imgPosX}% ${imgPosY}%;"
                     onerror="this.onerror=null;this.src='${IMG_BASE_URL}def${personData.Gender}.jpg';" />
             </div>
             <div class="card-name">${personData.Name}</div>
@@ -778,37 +777,21 @@ function selectPerson(personId) {
     const targetNode = findNodeForPerson(personId);
     if (!targetNode) return;
 
-    const isMobile = window.innerWidth < 768;
-    const scale = isMobile ? 1.4 : 1;
+    const isMobile = window.innerWidth < 1024;
+    const scale = isMobile ? 2 : 1;
 
     const container = document.getElementById("tree-container");
     const rect = container.getBoundingClientRect();
 
-    const x = rect.width / 2 - targetNode.x * scale;
-    const y = rect.height / 3 - targetNode.y * scale;
+    const x = rect.width / 3 - targetNode.x * scale;
+    const y = rect.height / 5 - targetNode.y * scale;
 
     svg.transition()
-        .duration(750)
+        .duration(1000)
         .call(
             zoom.transform,
-            d3.zoomIdentity.translate(x, y).scale(scale)
+            d3.zoomIdentity.translate(x, y).scale(scale),
         );
-
-    highlightNode(personId);
-}
-
-/**
- * Visual focus indicator
- * @param {*} personId 
- */
-function highlightNode(personId) {
-    // clear previous highlights
-    d3.selectAll(".highlighted")
-        .classed("highlighted", false);
-
-    // highlight ALL representations of this person
-    d3.selectAll(`[data-person-id="${personId}"]`)
-        .classed("highlighted", true);
 }
 
 // Cache references for search | Wire Input → Autocomplete
@@ -966,3 +949,18 @@ document
 
 // enable drag handle
 enableBottomSheetDragToClose();
+
+// move search container at runtime
+const searchContainer = document.getElementById("search-container");
+const headerCenter = document.querySelector(".header-center");
+const mobileRow = document.getElementById("mobile-search-row");
+
+function placeSearchBar() {
+  if (window.innerWidth <= 1024) {
+    mobileRow.appendChild(searchContainer);
+  } else {
+    headerCenter.appendChild(searchContainer);
+  }
+}
+
+placeSearchBar();
